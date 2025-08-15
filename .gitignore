@@ -1,3 +1,37 @@
+# Build outputs
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Logs and caches
+logs/
+*.log
+*.cache
+
+# Large data/backups
+DatabaseBackups/
+*.bak
+*.mdf
+*.ldf
+*.zip
+*.7z
+*.rar
+
+# Spreadsheets and raw data dumps
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# OS files
+Thumbs.db
+Desktop.ini
+
 # Build
 bin/
 obj/
