@@ -1,0 +1,35 @@
+# Build
+bin/
+obj/
+
+# User-specific
+*.user
+*.suo
+.vscode/
+.vs/
+
+# Logs
+*.log
+logs/
+
+# Secrets
+appsettings.json
+appsettings.Development.json
+appsettings.Local.json
+*.secret.json
+
+# Packages
+*.nupkg
+packages/
+
+# Others
+*.cache
+*.tmp
+
+# Large artifacts
+DatabaseBackups/
+*.bak
+*.zip
+*.7z
+*.rar
+*.xlsx
