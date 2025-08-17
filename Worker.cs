@@ -140,46 +140,8 @@ namespace KiteMarketDataService.Worker
                 }
                 else
                 {
-                    _logger.LogWarning("No real instruments from API, using generated instruments");
-                    
-                    // Fallback to generated instruments
-                    var instruments = await _kiteService.GetOptionInstrumentsAsync();
-                    
-                    if (instruments.Any())
-                    {
-                        // Convert to Instrument entities
-                        var instrumentEntities = new List<Instrument>();
-                        foreach (var instrumentKey in instruments)
-                        {
-                            var parts = instrumentKey.Split(':');
-                            if (parts.Length == 2)
-                            {
-                                var instrument = new Instrument
-                                {
-                                    InstrumentToken = 0, // Will be updated when we get actual data
-                                    ExchangeToken = 0,
-                                    TradingSymbol = parts[1],
-                                    Name = parts[1],
-                                    LastPrice = 0,
-                                    Expiry = DateTime.Parse("2024-12-24"),
-                                    Strike = 0,
-                                    TickSize = 0.05m,
-                                    LotSize = 50,
-                                    InstrumentType = parts[1].EndsWith("CE") ? "CE" : "PE",
-                                    Segment = "NFO-OPT",
-                                    Exchange = parts[0]
-                                };
-                                instrumentEntities.Add(instrument);
-                            }
-                        }
-                        
-                        await _marketDataService.SaveInstrumentsAsync(instrumentEntities);
-                        _logger.LogInformation($"Loaded {instrumentEntities.Count} generated instruments");
-                    }
-                    else
-                    {
-                        _logger.LogWarning("No instruments generated");
-                    }
+                    _logger.LogError("No instruments returned by Kite API. Skipping instrument load and will retry later.");
+                    return;
                 }
             }
             catch (Exception ex)
