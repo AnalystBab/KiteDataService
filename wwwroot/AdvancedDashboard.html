@@ -744,7 +744,7 @@
         <div id="label-analysis-page" class="page-content hidden">
             <div class="page-header">
                 <h1><i class="fas fa-tags"></i> Label Analysis</h1>
-                <div class="subtitle">Detailed breakdown of all 35 strategy labels</div>
+                <div class="subtitle">Detailed breakdown of all 27 strategy labels organized by category</div>
             </div>
 
             <div class="index-selector">
@@ -1142,27 +1142,91 @@
             const index = document.getElementById('label-index-select').value;
             const labelsGrid = document.getElementById('labels-grid');
             
+            // All 27 Strategy Labels with categories
             const labels = [
-                { id: 1, name: 'SPOT_CLOSE_D0', value: '82,450', description: 'D0 day closing price' },
-                { id: 2, name: 'CALL_BASE_STRIKE', value: '79,600', description: 'Selected call base strike' },
-                { id: 3, name: 'PUT_BASE_STRIKE', value: '82,100', description: 'Selected put base strike' },
-                { id: 4, name: 'CALL_MINUS_DISTANCE', value: '2,850', description: 'Distance from call base' },
-                { id: 5, name: 'PUT_MINUS_DISTANCE', value: '-350', description: 'Distance from put base' }
+                // CATEGORY 1: BASE DATA LABELS (1-8)
+                { id: 1, name: 'SPOT_CLOSE_D0', value: '82,450', description: 'D0 day closing price - base reference', category: 'BASE_DATA', importance: 5 },
+                { id: 2, name: 'CLOSE_STRIKE', value: '82,450', description: 'Closing strike price (same as spot close)', category: 'BASE_DATA', importance: 5 },
+                { id: 3, name: 'CLOSE_CE_UC_D0', value: '2,850', description: 'Call option Upper Circuit value', category: 'BASE_DATA', importance: 5 },
+                { id: 4, name: 'CLOSE_PE_UC_D0', value: '2,850', description: 'Put option Upper Circuit value', category: 'BASE_DATA', importance: 5 },
+                { id: 5, name: 'CALL_BASE_STRIKE', value: '79,600', description: 'Selected call base strike (D0 close - CE UC)', category: 'BASE_DATA', importance: 5 },
+                { id: 6, name: 'PUT_BASE_STRIKE', value: '85,300', description: 'Selected put base strike (D0 close + PE UC)', category: 'BASE_DATA', importance: 5 },
+                { id: 7, name: 'CALL_BASE_UC', value: '2,850', description: 'Call base strike UC value', category: 'BASE_DATA', importance: 4 },
+                { id: 8, name: 'PUT_BASE_UC', value: '2,850', description: 'Put base strike UC value', category: 'BASE_DATA', importance: 4 },
+                
+                // CATEGORY 2: BOUNDARY LABELS (9-11)
+                { id: 9, name: 'BOUNDARY_LOWER', value: '76,750', description: 'Lower boundary (Call Base - Call Base UC)', category: 'BOUNDARY', importance: 4 },
+                { id: 10, name: 'BOUNDARY_UPPER', value: '88,150', description: 'Upper boundary (Put Base + Put Base UC)', category: 'BOUNDARY', importance: 4 },
+                { id: 11, name: 'BOUNDARY_RANGE', value: '11,400', description: 'Maximum possible range for D1', category: 'BOUNDARY', importance: 3 },
+                
+                // CATEGORY 3: QUADRANT LABELS (12-15)
+                { id: 12, name: 'CALL_MINUS_VALUE', value: '79,600', description: 'Call seller\'s maximum profit zone (C-)', category: 'QUADRANT', importance: 5 },
+                { id: 13, name: 'PUT_MINUS_VALUE', value: '79,600', description: 'Put seller\'s danger zone (P-)', category: 'QUADRANT', importance: 5 },
+                { id: 14, name: 'CALL_PLUS_VALUE', value: '85,300', description: 'Call seller\'s danger zone (C+)', category: 'QUADRANT', importance: 5 },
+                { id: 15, name: 'PUT_PLUS_VALUE', value: '85,300', description: 'Put seller\'s maximum profit zone (P+)', category: 'QUADRANT', importance: 4 },
+                
+                // CATEGORY 4: DISTANCE LABELS (16-19) - KEY PREDICTORS!
+                { id: 16, name: 'CALL_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: '⚡ GOLDEN! Day range predictor (99.65% accuracy)', category: 'DISTANCE', importance: 6 },
+                { id: 17, name: 'PUT_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from call base', category: 'DISTANCE', importance: 3 },
+                { id: 18, name: 'CALL_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Gap between call plus and put base', category: 'DISTANCE', importance: 3 },
+                { id: 19, name: 'PUT_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from put base', category: 'DISTANCE', importance: 3 },
+                
+                // CATEGORY 5: PLUS DISTANCE LABELS (20-23) - NEW!
+                { id: 20, name: 'CLOSE_CE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + CE UC distance (upside potential)', category: 'PLUS_DISTANCE', importance: 4 },
+                { id: 21, name: 'CLOSE_PE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + PE UC distance (downside potential)', category: 'PLUS_DISTANCE', importance: 4 },
+                { id: 22, name: 'CLOSE_CE_UC_PLUS_DISTANCE_TO_PUT_BASE', value: '2,850', description: 'Distance from Close+CE UC to Put Base', category: 'PLUS_DISTANCE', importance: 3 },
+                { id: 23, name: 'CLOSE_PE_UC_PLUS_DISTANCE_TO_CALL_BASE', value: '2,850', description: 'Distance from Close+PE UC to Call Base', category: 'PLUS_DISTANCE', importance: 3 },
+                
+                // CATEGORY 6: TARGET PREMIUM LABELS (24-27)
+                { id: 24, name: 'TARGET_CE_PREMIUM', value: '2,850', description: 'Target call option premium (C- process result)', category: 'TARGET_PREMIUM', importance: 5 },
+                { id: 25, name: 'TARGET_PE_PREMIUM', value: '2,850', description: 'Target put option premium (P- process result)', category: 'TARGET_PREMIUM', importance: 5 },
+                { id: 26, name: 'TARGET_CE_PREMIUM_PLUS', value: '2,850', description: 'Target call premium for C+ process', category: 'TARGET_PREMIUM', importance: 4 },
+                { id: 27, name: 'TARGET_PE_PREMIUM_PLUS', value: '2,850', description: 'Target put premium for P+ process', category: 'TARGET_PREMIUM', importance: 4 }
             ];
             
             labelsGrid.innerHTML = '';
+            
+            // Group labels by category
+            const categories = {};
             labels.forEach(label => {
+                if (!categories[label.category]) {
+                    categories[label.category] = [];
+                }
+                categories[label.category].push(label);
+            });
+            
+            // Display labels by category
+            Object.keys(categories).forEach(category => {
+                const categoryLabels = categories[category];
+                const categoryName = category.replace('_', ' ').toUpperCase();
+                
                 labelsGrid.innerHTML += `
-                    <div class="col-md-6 col-lg-4 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body">
-                                <h6 class="card-title">${label.name}</h6>
-                                <h4 class="text-primary">${label.value}</h4>
-                                <p class="card-text small">${label.description}</p>
-                            </div>
-                        </div>
+                    <div class="col-12 mb-4">
+                        <h5 class="text-primary border-bottom pb-2">📊 ${categoryName} LABELS (${categoryLabels.length})</h5>
                     </div>
                 `;
+                
+                categoryLabels.forEach(label => {
+                    const importanceColor = label.importance >= 5 ? 'text-danger' : label.importance >= 4 ? 'text-warning' : 'text-info';
+                    const importanceIcon = label.importance >= 6 ? '⭐' : label.importance >= 5 ? '🔥' : label.importance >= 4 ? '⚡' : '📊';
+                    
+                    labelsGrid.innerHTML += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-left-${label.importance >= 5 ? 'danger' : label.importance >= 4 ? 'warning' : 'info'}">
+                                <div class="card-body">
+                                    <h6 class="card-title ${importanceColor}">
+                                        ${importanceIcon} ${label.name}
+                                    </h6>
+                                    <h4 class="text-primary">${label.value}</h4>
+                                    <p class="card-text small">${label.description}</p>
+                                    <span class="badge badge-${label.importance >= 5 ? 'danger' : label.importance >= 4 ? 'warning' : 'info'}">
+                                        Importance: ${label.importance}/6
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             });
         }
 
