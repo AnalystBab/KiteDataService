@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Real Data - Market Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .data-item { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; }
+        .label { font-weight: bold; color: #495057; }
+        .value { color: #007bff; font-family: monospace; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .loading { color: #6c757d; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Real Data Test - Market Dashboard</h1>
+        <p>This page tests if the API is returning real data from your database instead of hardcoded values.</p>
+        
+        <button onclick="testAllAPIs()">🔄 Test All APIs</button>
+        <button onclick="clearResults()">🗑️ Clear Results</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="js/api-client.js"></script>
+    <script>
+        const api = new MarketPredictionAPI();
+        const resultsDiv = document.getElementById('results');
+
+        async function testAllAPIs() {
+            clearResults();
+            addResult('Starting API tests...', 'loading');
+            
+            // Test 1: Health Check
+            await testHealth();
+            
+            // Test 2: Predictions
+            await testPredictions();
+            
+            // Test 3: Strategy Labels
+            await testStrategyLabels();
+            
+            // Test 4: Process Breakdown
+            await testProcessBreakdown();
+            
+            // Test 5: Live Market
+            await testLiveMarket();
+            
+            addResult('All tests completed!', 'success');
+        }
+
+        async function testHealth() {
+            try {
+                addResult('Testing Health API...', 'loading');
+                const health = await api.checkHealth();
+                
+                if (health.status === 'Healthy') {
+                    addResult(`✅ Health API: ${health.status}`, 'success');
+                    addResult(`   Database: ${health.database}`, 'success');
+                    addResult(`   Total Labels: ${health.stats?.totalLabels || 'N/A'}`, 'success');
+                    addResult(`   Total Spot Data: ${health.stats?.totalSpotData || 'N/A'}`, 'success');
+                } else {
+                    addResult(`❌ Health API: ${health.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Health API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPredictions() {
+            try {
+                addResult('Testing Predictions API...', 'loading');
+                const predictions = await api.getPredictions('SENSEX');
+                
+                if (predictions && predictions.length > 0) {
+                    const pred = predictions[0];
+                    addResult('✅ Predictions API: Real data found!', 'success');
+                    addResult(`   Index: ${pred.indexName}`, 'success');
+                    addResult(`   Business Date: ${pred.businessDate}`, 'success');
+                    addResult(`   Predicted Low: ${pred.predictedLow?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Predicted High: ${pred.predictedHigh?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Predicted Close: ${pred.predictedClose?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Accuracy: ${(pred.accuracy * 100).toFixed(2)}%`, 'success');
+                } else {
+                    addResult('❌ Predictions API: No data found', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Predictions API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStrategyLabels() {
+            try {
+                addResult('Testing Strategy Labels API...', 'loading');
+                const labels = await api.getStrategyLabels('SENSEX');
+                
+                if (labels && labels.length > 0) {
+                    addResult(`✅ Strategy Labels API: ${labels.length} labels found!`, 'success');
+                    
+                    // Show first 5 labels
+                    labels.slice(0, 5).forEach(label => {
+                        addResult(`   ${label.labelName}: ${label.labelValue?.toLocaleString() || 'N/A'}`, 'success');
+                    });
+                    
+                    if (labels.length > 5) {
+                        addResult(`   ... and ${labels.length - 5} more labels`, 'success');
+                    }
+                } else {
+                    addResult('❌ Strategy Labels API: No data found', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Strategy Labels API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testProcessBreakdown() {
+            try {
+                addResult('Testing Process Breakdown API...', 'loading');
+                const breakdown = await api.getProcessBreakdown('SENSEX');
+                
+                if (breakdown) {
+                    addResult('✅ Process Breakdown API: Real data found!', 'success');
+                    addResult(`   Call Minus: ${breakdown.callMinus?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Put Minus: ${breakdown.putMinus?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Call Plus: ${breakdown.callPlus?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Put Plus: ${breakdown.putPlus?.toLocaleString() || 'N/A'}`, 'success');
+                } else {
+                    addResult('❌ Process Breakdown API: No data found', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Process Breakdown API Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLiveMarket() {
+            try {
+                addResult('Testing Live Market API...', 'loading');
+                const liveData = await api.getLiveMarket('SENSEX');
+                
+                if (liveData && liveData.length > 0) {
+                    const data = liveData[0];
+                    addResult('✅ Live Market API: Real data found!', 'success');
+                    addResult(`   Open: ${data.open?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   High: ${data.high?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Low: ${data.low?.toLocaleString() || 'N/A'}`, 'success');
+                    addResult(`   Close: ${data.close?.toLocaleString() || 'N/A'}`, 'success');
+                } else {
+                    addResult('⚠️ Live Market API: No current data (this is normal offline)', 'loading');
+                }
+            } catch (error) {
+                addResult(`❌ Live Market API Error: ${error.message}`, 'error');
+            }
+        }
+
+        function addResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        // Auto-test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testAllAPIs, 1000);
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,47 @@
+Changed database context to 'KiteMarketData'.
+📊 Adding FirstSeenDate column...
+✅ FirstSeenDate column added successfully
+📊 Adding LastFetchedDate column...
+✅ LastFetchedDate column added successfully
+📊 Adding IsExpired column...
+✅ IsExpired column added successfully
+🔄 Initializing data for existing instruments...
+
+(0 rows affected)
+✅ FirstSeenDate initialized from LoadDate for existing records
+
+(0 rows affected)
+✅ LastFetchedDate initialized from LoadDate for existing records
+
+(6265 rows affected)
+✅ IsExpired flag initialized based on expiry dates
+📊 Creating index on FirstSeenDate...
+✅ Index IX_Instruments_FirstSeenDate created successfully
+📊 Creating index on IsExpired...
+Msg 1934, Level 16, State 1, Server LAPTOP-B68L4IP9, Line 5
+CREATE INDEX failed because the following SET options have incorrect settings: 'QUOTED_IDENTIFIER'. Verify that SET options are correct for use with indexed views and/or indexes on computed columns and/or filtered indexes and/or query notifications and/or XML data type methods and/or spatial index operations.
+ 
+🔍 VERIFICATION:
+================
+Metric              Count      
+------------------- -----------
+Total Instruments          6265
+Expired Instruments         366
+Active Instruments         5899
+
+(3 rows affected)
+ 
+✅ MIGRATION COMPLETED SUCCESSFULLY!
+ 
+📋 WHAT CHANGED:
+  • Added FirstSeenDate column (when we FIRST discovered this instrument)
+  • Added LastFetchedDate column (when we LAST fetched this instrument)
+  • Added IsExpired flag (for easy filtering of expired instruments)
+  • Created performance indexes
+  • Initialized data for existing records
+ 
+🎯 NEXT STEPS:
+  1. Rebuild the service project
+  2. Run the service - it will now refresh instruments every 30 minutes during market hours
+  3. New strikes will be detected within 30 minutes of NSE introducing them
+ 

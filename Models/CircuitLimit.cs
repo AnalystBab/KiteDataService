@@ -65,6 +65,6 @@ namespace KiteMarketDataService.Worker.Models
         public decimal? IndexLastPrice { get; set; }
         
         // Metadata
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow.AddHours(5.5); // Use IST time by default
     }
 } 

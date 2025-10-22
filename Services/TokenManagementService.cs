@@ -56,7 +56,7 @@ namespace KiteMarketDataService.Worker.Services
             _fileMonitorTimer?.Dispose();
         }
 
-        private async void CheckTokenStatus(object state)
+        private async void CheckTokenStatus(object? state)
         {
             try
             {
@@ -139,7 +139,7 @@ namespace KiteMarketDataService.Worker.Services
             }
         }
 
-        private void MonitorForNewTokens(object state)
+        private void MonitorForNewTokens(object? state)
         {
             try
             {

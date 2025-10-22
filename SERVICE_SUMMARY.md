@@ -117,6 +117,7 @@ The Kite Market Data Service is a .NET Worker Service that:
 5. **Instruments**: Instrument master data
 
 ## Ready for Production
+7950 give me the query
 
 The service is now ready to:
 - ✅ Start automatically at market open

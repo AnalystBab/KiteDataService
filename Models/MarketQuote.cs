@@ -3,85 +3,76 @@ using System.ComponentModel.DataAnnotations;
 
 namespace KiteMarketDataService.Worker.Models
 {
+    /// <summary>
+    /// MarketQuote model matching the cleaned database schema
+    /// Contains only essential columns for LC/UC monitoring and OHLC data
+    /// Target indices: NIFTY, SENSEX, BANKNIFTY only
+    /// </summary>
     public class MarketQuote
     {
-        [Key]
-        public long Id { get; set; }
-        
-        // Trading Information
-        public DateTime TradingDate { get; set; }
-        public TimeSpan TradeTime { get; set; }
-        public DateTime QuoteTimestamp { get; set; }
-        
-        // Instrument Information
-        public long InstrumentToken { get; set; }
+        // Primary Key (composite)
+        public DateTime BusinessDate { get; set; }
         public string TradingSymbol { get; set; } = string.Empty;
-        public string Exchange { get; set; } = string.Empty;
+        public int InsertionSequence { get; set; }  // Daily sequence (resets per business date)
+
+        /// <summary>
+        /// Global sequence number that increments across ALL business dates until expiry.
+        /// Example: For NIFTY 25100 CE (expiry Oct 24):
+        ///   Oct 7: GlobalSeq 1, 2, 3
+        ///   Oct 8: GlobalSeq 4, 5, 6  (continues from Oct 7)
+        ///   Oct 9: GlobalSeq 7, 8     (continues from Oct 8)
+        /// Used for tracking complete lifecycle of a contract.
+        /// </summary>
+        public int GlobalSequence { get; set; }
+
+        // CRITICAL: Instrument Token from Kite API (needed for API integration)
+        public long InstrumentToken { get; set; }
+
+        // Option Details
         public decimal Strike { get; set; }
         public string OptionType { get; set; } = string.Empty; // 'CE' or 'PE'
         public DateTime ExpiryDate { get; set; }
-        
-        // Price Data (OHLC + Last)
+
+        // OHLC Data
         public decimal OpenPrice { get; set; }
         public decimal HighPrice { get; set; }
         public decimal LowPrice { get; set; }
         public decimal ClosePrice { get; set; }
         public decimal LastPrice { get; set; }
-        
-        // Circuit Limits
+
+        // Circuit Limits (CRITICAL for this project)
         public decimal LowerCircuitLimit { get; set; }
         public decimal UpperCircuitLimit { get; set; }
+
+        // Trade Timing
+        public DateTime LastTradeTime { get; set; }
         
-        // Volume and Trading Data
-        public long Volume { get; set; }
-        public long LastQuantity { get; set; }
-        public long BuyQuantity { get; set; }
-        public long SellQuantity { get; set; }
-        public decimal AveragePrice { get; set; }
-        
-        // Open Interest
-        public decimal OpenInterest { get; set; }
-        public decimal OiDayHigh { get; set; }
-        public decimal OiDayLow { get; set; }
-        public decimal NetChange { get; set; }
-        
-        // Market Depth (Top 5 levels)
-        public decimal? BuyPrice1 { get; set; }
-        public long? BuyQuantity1 { get; set; }
-        public int? BuyOrders1 { get; set; }
-        public decimal? BuyPrice2 { get; set; }
-        public long? BuyQuantity2 { get; set; }
-        public int? BuyOrders2 { get; set; }
-        public decimal? BuyPrice3 { get; set; }
-        public long? BuyQuantity3 { get; set; }
-        public int? BuyOrders3 { get; set; }
-        public decimal? BuyPrice4 { get; set; }
-        public long? BuyQuantity4 { get; set; }
-        public int? BuyOrders4 { get; set; }
-        public decimal? BuyPrice5 { get; set; }
-        public long? BuyQuantity5 { get; set; }
-        public int? BuyOrders5 { get; set; }
-        
-        public decimal? SellPrice1 { get; set; }
-        public long? SellQuantity1 { get; set; }
-        public int? SellOrders1 { get; set; }
-        public decimal? SellPrice2 { get; set; }
-        public long? SellQuantity2 { get; set; }
-        public int? SellOrders2 { get; set; }
-        public decimal? SellPrice3 { get; set; }
-        public long? SellQuantity3 { get; set; }
-        public int? SellOrders3 { get; set; }
-        public decimal? SellPrice4 { get; set; }
-        public long? SellQuantity4 { get; set; }
-        public int? SellOrders4 { get; set; }
-        public decimal? SellPrice5 { get; set; }
-        public long? SellQuantity5 { get; set; }
-        public int? SellOrders5 { get; set; }
-        
-        // Metadata
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
-        // Navigation property
-        public virtual Instrument? Instrument { get; set; }
+        // Record Timing - when LC/UC change was actually detected and recorded
+        public DateTime RecordDateTime { get; set; }
+
+        /// <summary>
+        /// Get index name from trading symbol (NIFTY, SENSEX, BANKNIFTY only)
+        /// </summary>
+        public string GetIndexName()
+        {
+            if (TradingSymbol.Contains("SENSEX"))
+                return "SENSEX";
+            else if (TradingSymbol.Contains("BANKNIFTY"))
+                return "BANKNIFTY";
+            else if (TradingSymbol.Contains("NIFTY"))
+                return "NIFTY";
+            else
+                return "UNKNOWN";
+        }
+
+        /// <summary>
+        /// Check if this is a LC/UC change record (sequence > 1)
+        /// </summary>
+        public bool IsLCUCChange => InsertionSequence > 1;
+
+        /// <summary>
+        /// Get formatted display name
+        /// </summary>
+        public string DisplayName => $"{TradingSymbol} {Strike} {OptionType}";
     }
-} 
+}

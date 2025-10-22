@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+MANUAL NIFTY SPOT DATA
+Update this file with NIFTY spot data when database spot data is not available
+This ensures accurate business date calculation for LC/UC monitoring
+-->
+<SpotDataConfiguration>
+  <!-- NIFTY SPOT DATA - UPDATE THESE VALUES -->
+  <NIFTY>
+    <IndexName>NIFTY</IndexName>
+    <TradingDate>2025-10-07</TradingDate>                    <!-- UPDATE: Last trading date -->
+    <QuoteTimestamp>2025-10-07 18:30:00</QuoteTimestamp>    <!-- UPDATE: Last trade time -->
+    <OpenPrice>25085</OpenPrice>                          <!-- UPDATE: Opening price -->
+    <HighPrice>25220</HighPrice>                          <!-- UPDATE: Day's high -->
+    <LowPrice>25076</LowPrice>                            <!-- UPDATE: Day's low -->
+    <ClosePrice>25108</ClosePrice>                        <!-- UPDATE: Closing price -->
+    <LastPrice>25108</LastPrice>                          <!-- UPDATE: Last traded price -->
+    <IsMarketOpen>false</IsMarketOpen>                       <!-- UPDATE: true if market is open -->
+    <BusinessDate>2025-10-07</BusinessDate>                 <!-- UPDATE: Business date -->
+  </NIFTY>
+</SpotDataConfiguration>

@@ -101,7 +101,7 @@ namespace KiteMarketDataService.Worker.Services
 
                 // Get instruments that have quotes today (traded)
                 var tradedInstruments = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == today)
+                    .Where(q => q.RecordDateTime.Date == today)
                     .Select(q => q.InstrumentToken)
                     .Distinct()
                     .ToListAsync();
@@ -146,11 +146,11 @@ namespace KiteMarketDataService.Worker.Services
 
                 // Check if we have any data for comparison
                 var yesterdayCount = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == yesterday)
+                    .Where(q => q.RecordDateTime.Date == yesterday)
                     .CountAsync();
                     
                 var todayCount = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == today)
+                    .Where(q => q.RecordDateTime.Date == today)
                     .CountAsync();
                     
                 // Only proceed if we have some data for both days
@@ -163,11 +163,14 @@ namespace KiteMarketDataService.Worker.Services
                 
                 _logger.LogInformation($"Data available for circuit limit detection. Yesterday: {yesterdayCount}, Today: {todayCount} quotes.");
 
-                // Get all instruments grouped by underlying
-                var instrumentsByUnderlying = await context.Instruments
+                // Get all instruments first, then group by underlying in memory
+                var allInstruments = await context.Instruments
                     .Where(i => i.InstrumentType == "CE" || i.InstrumentType == "PE")
-                    .GroupBy(i => GetUnderlyingSymbol(i.TradingSymbol))
                     .ToListAsync();
+
+                var instrumentsByUnderlying = allInstruments
+                    .GroupBy(i => GetUnderlyingSymbol(i.TradingSymbol))
+                    .ToList();
 
                 var changes = new List<CircuitLimitChange>();
 
@@ -179,12 +182,12 @@ namespace KiteMarketDataService.Worker.Services
                     // Get yesterday's and today's quotes for this underlying
                     var yesterdayQuotes = await context.MarketQuotes
                         .Where(q => instrumentTokens.Contains(q.InstrumentToken) && 
-                                   q.QuoteTimestamp.Date == yesterday)
+                                   q.RecordDateTime.Date == yesterday)
                         .ToListAsync();
 
                     var todayQuotes = await context.MarketQuotes
                         .Where(q => instrumentTokens.Contains(q.InstrumentToken) && 
-                                   q.QuoteTimestamp.Date == today)
+                                   q.RecordDateTime.Date == today)
                         .ToListAsync();
 
                     if (!yesterdayQuotes.Any() || !todayQuotes.Any()) continue;
@@ -290,11 +293,11 @@ namespace KiteMarketDataService.Worker.Services
 
                 // Check if we have any data for comparison
                 var yesterdayCount = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == yesterday)
+                    .Where(q => q.RecordDateTime.Date == yesterday)
                     .CountAsync();
                     
                 var todayCount = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == today)
+                    .Where(q => q.RecordDateTime.Date == today)
                     .CountAsync();
                     
                 if (yesterdayCount == 0 || todayCount == 0)
@@ -307,7 +310,7 @@ namespace KiteMarketDataService.Worker.Services
 
                 // Get all instruments that have quotes both yesterday and today
                 var instrumentsWithQuotes = await context.MarketQuotes
-                    .Where(q => q.QuoteTimestamp.Date == yesterday || q.QuoteTimestamp.Date == today)
+                    .Where(q => q.RecordDateTime.Date == yesterday || q.RecordDateTime.Date == today)
                     .Select(q => q.InstrumentToken)
                     .Distinct()
                     .ToListAsync();
@@ -317,14 +320,14 @@ namespace KiteMarketDataService.Worker.Services
                     // Get yesterday's and today's quotes for this specific instrument
                     var yesterdayQuote = await context.MarketQuotes
                         .Where(q => q.InstrumentToken == instrumentToken && 
-                                   q.QuoteTimestamp.Date == yesterday)
-                        .OrderByDescending(q => q.QuoteTimestamp)
+                                   q.RecordDateTime.Date == yesterday)
+                        .OrderByDescending(q => q.RecordDateTime)
                         .FirstOrDefaultAsync();
 
                     var todayQuote = await context.MarketQuotes
                         .Where(q => q.InstrumentToken == instrumentToken && 
-                                   q.QuoteTimestamp.Date == today)
-                        .OrderByDescending(q => q.QuoteTimestamp)
+                                   q.RecordDateTime.Date == today)
+                        .OrderByDescending(q => q.RecordDateTime)
                         .FirstOrDefaultAsync();
 
                     if (yesterdayQuote == null || todayQuote == null) continue;
@@ -484,7 +487,7 @@ namespace KiteMarketDataService.Worker.Services
                 // Get the most recent quote for the spot instrument
                 var spotQuote = await context.MarketQuotes
                     .Where(q => q.InstrumentToken == spotInstrument.InstrumentToken)
-                    .OrderByDescending(q => q.QuoteTimestamp)
+                    .OrderByDescending(q => q.RecordDateTime)
                     .FirstOrDefaultAsync();
 
                 if (spotQuote == null)
@@ -501,7 +504,7 @@ namespace KiteMarketDataService.Worker.Services
                     High = spotQuote.HighPrice,
                     Low = spotQuote.LowPrice,
                     Close = spotQuote.ClosePrice,
-                    Volume = spotQuote.Volume,
+                    // Volume removed - not needed for LC/UC monitoring
                     LastPrice = spotQuote.LastPrice,
                     LowerCircuitLimit = spotQuote.LowerCircuitLimit,
                     UpperCircuitLimit = spotQuote.UpperCircuitLimit
@@ -582,9 +585,9 @@ namespace KiteMarketDataService.Worker.Services
                 {
                     TradingDate = DateTime.Today,
                     InstrumentToken = change.TriggeredByInstrumentToken,
-                    TradingSymbol = change.TriggeredByTradingSymbol ?? string.Empty,
+                    TradingSymbol = change.TriggeredByTradingSymbol ?? "Unknown",
                     Strike = change.TriggeredByStrike ?? 0,
-                    OptionType = change.TriggeredByInstrumentType,
+                    OptionType = change.TriggeredByInstrumentType ?? "Unknown",
                     Exchange = "NFO", // Default for options
                     ExpiryDate = change.TriggeredByExpiry ?? DateTime.MinValue,
                     ChangeType = "BOTH_CHANGE", // Default, can be enhanced later
@@ -608,13 +611,13 @@ namespace KiteMarketDataService.Worker.Services
                     IndexLowPrice = change.SpotLow,
                     IndexClosePrice = change.SpotLastPrice,
                     IndexLastPrice = change.SpotLastPrice,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow.AddHours(5.5)
                 };
 
                 await context.CircuitLimitChanges.AddAsync(changeRecord);
                 await context.SaveChangesAsync();
 
-                _logger.LogInformation($"Tracked circuit limit change for {change.TriggeredByTradingSymbol} with spot data: O={change.SpotOpen}, H={change.SpotHigh}, L={change.SpotLow}, C={change.SpotLastPrice}, V={change.SpotVolume}");
+                _logger.LogInformation($"Tracked circuit limit change for {change.TriggeredByTradingSymbol ?? "Unknown"} with spot data: O={change.SpotOpen}, H={change.SpotHigh}, L={change.SpotLow}, C={change.SpotLastPrice}, V={change.SpotVolume}");
             }
             catch (Exception ex)
             {

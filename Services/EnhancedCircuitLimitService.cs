@@ -32,7 +32,7 @@ namespace KiteMarketDataService.Worker.Services
         {
             try
             {
-                var istTime = DateTime.UtcNow.AddHours(5.5); // UTC+5:30
+                var istTime = DateTime.Now; // Already in IST
                 var snapshotType = DetermineSnapshotType(istTime);
                 
                 _logger.LogInformation($"Processing circuit limits at {istTime:HH:mm:ss} IST - Type: {snapshotType}");
@@ -111,7 +111,7 @@ namespace KiteMarketDataService.Worker.Services
                 _logger.LogInformation($"Baseline data stored for {tradingDate:yyyy-MM-dd} - {quotes.Count} instruments");
                 
                 // Store in database for historical reference
-                await StoreDailySnapshotAsync(context, quotes, "MARKET_OPEN", istTime);
+                // await StoreDailySnapshotAsync(context, quotes, "MARKET_OPEN", istTime); // DISABLED
             }
             catch (Exception ex)
             {
@@ -131,7 +131,7 @@ namespace KiteMarketDataService.Worker.Services
 
                 _logger.LogInformation($"Storing final market data for {istTime.Date:yyyy-MM-dd}");
                 
-                await StoreDailySnapshotAsync(context, quotes, "MARKET_CLOSE", istTime);
+                // await StoreDailySnapshotAsync(context, quotes, "MARKET_CLOSE", istTime); // DISABLED
             }
             catch (Exception ex)
             {
@@ -151,7 +151,7 @@ namespace KiteMarketDataService.Worker.Services
 
                 _logger.LogInformation($"Storing post-market data for {istTime.Date:yyyy-MM-dd}");
                 
-                await StoreDailySnapshotAsync(context, quotes, "POST_MARKET", istTime);
+                // await StoreDailySnapshotAsync(context, quotes, "POST_MARKET", istTime); // DISABLED
             }
             catch (Exception ex)
             {
@@ -224,12 +224,12 @@ namespace KiteMarketDataService.Worker.Services
                 // Get NIFTY and SENSEX latest OHLC
                 var indexQuotes = await context.MarketQuotes
                     .Where(mq => mq.TradingSymbol == "NIFTY" || mq.TradingSymbol == "SENSEX")
-                    .Where(mq => mq.QuoteTimestamp.Date == tradingDate)
+                    .Where(mq => mq.RecordDateTime.Date == tradingDate)
                     .GroupBy(mq => mq.TradingSymbol)
                     .Select(g => new
                     {
                         Symbol = g.Key,
-                        LatestQuote = g.OrderByDescending(q => q.QuoteTimestamp).First()
+                        LatestQuote = g.OrderByDescending(q => q.RecordDateTime).First()
                     })
                     .ToListAsync();
 
@@ -276,7 +276,7 @@ namespace KiteMarketDataService.Worker.Services
                 TradingSymbol = quote.TradingSymbol,
                 Strike = quote.Strike,
                 OptionType = quote.OptionType,
-                Exchange = quote.Exchange,
+                // Exchange removed - not needed for LC/UC monitoring = quote.// Exchange removed - not needed for LC/UC monitoring,
                 ExpiryDate = quote.ExpiryDate,
                 ChangeType = changeType,
                 PreviousLC = previousLC,
@@ -288,7 +288,7 @@ namespace KiteMarketDataService.Worker.Services
                 IndexLowPrice = indexLow,
                 IndexClosePrice = indexClose,
                 IndexLastPrice = indexLast,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow.AddHours(5.5)
             };
         }
 
@@ -308,54 +308,14 @@ namespace KiteMarketDataService.Worker.Services
         }
 
         /// <summary>
-        /// Store daily snapshot
+        /// Store daily snapshot - DISABLED (table removed)
         /// </summary>
+        /*
         private async Task StoreDailySnapshotAsync(MarketDataContext context, List<MarketQuote> quotes, string snapshotType, DateTime istTime)
         {
-            try
-            {
-                var tradingDate = istTime.Date;
-                var snapshots = new List<DailyMarketSnapshot>();
-
-                foreach (var quote in quotes)
-                {
-                    var snapshot = new DailyMarketSnapshot
-                    {
-                        TradingDate = tradingDate,
-                        SnapshotTime = istTime,
-                        InstrumentToken = quote.InstrumentToken,
-                        TradingSymbol = quote.TradingSymbol,
-                        Strike = quote.Strike,
-                        OptionType = quote.OptionType,
-                        Exchange = quote.Exchange,
-                        ExpiryDate = quote.ExpiryDate,
-                        OpenPrice = quote.OpenPrice,
-                        HighPrice = quote.HighPrice,
-                        LowPrice = quote.LowPrice,
-                        ClosePrice = quote.ClosePrice,
-                        LastPrice = quote.LastPrice,
-                        LowerCircuitLimit = quote.LowerCircuitLimit,
-                        UpperCircuitLimit = quote.UpperCircuitLimit,
-                        Volume = quote.Volume,
-                        OpenInterest = quote.OpenInterest,
-                        NetChange = quote.NetChange,
-                        SnapshotType = snapshotType,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    snapshots.Add(snapshot);
-                }
-
-                context.DailyMarketSnapshots.AddRange(snapshots);
-                await context.SaveChangesAsync();
-
-                _logger.LogInformation($"Stored {snapshotType} snapshot for {quotes.Count} instruments at {istTime:HH:mm:ss}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error storing {snapshotType} snapshot");
-            }
+            // Method disabled - DailyMarketSnapshot table removed due to redundancy
         }
+        */
 
         /// <summary>
         /// Store change records
@@ -378,16 +338,20 @@ namespace KiteMarketDataService.Worker.Services
         /// <summary>
         /// Get last trading day data for comparison
         /// </summary>
-        public async Task<DateTime?> GetLastTradingDayAsync()
+        public async Task<DateTime?> GetLastTradingDayAsync(DateTime? currentBusinessDate = null)
         {
             try
             {
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
 
+                // Use provided current business date or fallback to today
+                var effectiveCurrentDate = currentBusinessDate ?? DateTime.Today;
+
+                // Use BusinessDate instead of RecordDateTime to handle pre-market LC/UC changes correctly
                 var lastTradingDay = await context.MarketQuotes
-                    .Where(mq => mq.QuoteTimestamp.Date < DateTime.Today)
-                    .Select(mq => mq.QuoteTimestamp.Date)
+                    .Where(mq => mq.BusinessDate < effectiveCurrentDate)
+                    .Select(mq => mq.BusinessDate)
                     .Distinct()
                     .OrderByDescending(date => date)
                     .FirstOrDefaultAsync();
@@ -402,41 +366,43 @@ namespace KiteMarketDataService.Worker.Services
         }
 
         /// <summary>
-        /// Initialize baseline data from last trading day
+        /// Initialize baseline data from last available records for each strike
+        /// Baseline = Last record stored in database for each strike (most recent data we have)
         /// </summary>
-        public async Task InitializeBaselineFromLastTradingDayAsync()
+        public async Task InitializeBaselineFromLastTradingDayAsync(DateTime? currentBusinessDate = null)
         {
             try
             {
-                var lastTradingDay = await GetLastTradingDayAsync();
-                
-                if (lastTradingDay.HasValue)
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
+
+                // Get LAST record for each strike (most recent RecordDateTime)
+                // This is the last data we have, regardless of which date it's from
+                var lastRecords = await context.MarketQuotes
+                    .GroupBy(mq => mq.InstrumentToken)
+                    .Select(g => g.OrderByDescending(q => q.RecordDateTime).First())
+                    .ToListAsync();
+
+                if (lastRecords.Any())
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
-
-                    var lastDayQuotes = await context.MarketQuotes
-                        .Where(mq => mq.QuoteTimestamp.Date == lastTradingDay.Value)
-                        .GroupBy(mq => mq.InstrumentToken)
-                        .Select(g => g.OrderByDescending(q => q.QuoteTimestamp).First())
-                        .ToListAsync();
-
-                    foreach (var quote in lastDayQuotes)
+                    foreach (var quote in lastRecords)
                     {
                         _baselineData[quote.InstrumentToken] = (quote.LowerCircuitLimit, quote.UpperCircuitLimit);
                     }
 
-                    _lastBaselineDate = lastTradingDay.Value;
-                    _logger.LogInformation($"Initialized baseline from last trading day {lastTradingDay.Value:yyyy-MM-dd} - {lastDayQuotes.Count} instruments");
+                    var mostRecentDate = lastRecords.Max(q => q.BusinessDate);
+                    _lastBaselineDate = mostRecentDate;
+                    
+                    _logger.LogInformation($"Initialized baseline from LAST available records - {lastRecords.Count} instruments (most recent data from business date: {mostRecentDate:yyyy-MM-dd})");
                 }
                 else
                 {
-                    _logger.LogInformation("No previous trading day data found - will start fresh from today");
+                    _logger.LogInformation("No previous data found - will start fresh from today");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error initializing baseline from last trading day");
+                _logger.LogError(ex, "Error initializing baseline from last available records");
             }
         }
     }

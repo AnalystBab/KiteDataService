@@ -1,0 +1,21 @@
+========================================
+BANKNIFTY CALLS (CE) - LC/UC CHANGES
+========================================
+ 
+Msg 512, Level 16, State 1, Server LAPTOP-B68L4IP9, Line 13
+Subquery returned more than 1 value. This is not permitted when the subquery follows =, !=, <, <= , >, >= or when the subquery is used as an expression.
+ 
+========================================
+BANKNIFTY PUTS (PE) - LC/UC CHANGES
+========================================
+ 
+Msg 512, Level 16, State 1, Server LAPTOP-B68L4IP9, Line 112
+Subquery returned more than 1 value. This is not permitted when the subquery follows =, !=, <, <= , >, >= or when the subquery is used as an expression.
+ 
+✅ BANKNIFTY LC/UC Changes Report Complete!
+ 
+LEGEND:
+  Baseline_* = Last record from 9th Oct (max GlobalSequence)
+  First_*_10th = First record from 10th Oct
+  Last_*_10th = Last record from 10th Oct (max GlobalSequence)
+  *_Change = Difference from baseline to last value on 10th

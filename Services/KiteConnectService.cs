@@ -17,18 +17,21 @@ namespace KiteMarketDataService.Worker.Services
         private readonly ILogger<KiteConnectService> _logger;
         private readonly IConfiguration _configuration;
         private readonly KiteAuthService _authService;
+        private readonly FullInstrumentService _fullInstrumentService;
         private string? _accessToken;
 
         public KiteConnectService(
             ILogger<KiteConnectService> logger, 
             HttpClient httpClient, 
             IConfiguration configuration,
-            KiteAuthService authService)
+            KiteAuthService authService,
+            FullInstrumentService fullInstrumentService)
         {
             _logger = logger;
             _httpClient = httpClient;
             _configuration = configuration;
             _authService = authService;
+            _fullInstrumentService = fullInstrumentService;
             
             _httpClient.BaseAddress = new Uri("https://api.kite.trade/");
             _httpClient.DefaultRequestHeaders.Add("X-Kite-Version", "3");
@@ -64,8 +67,9 @@ namespace KiteMarketDataService.Worker.Services
                     return await AuthenticateWithRequestTokenAsync(requestToken);
                 }
 
-                _logger.LogWarning("No access token or request token available");
-                return false;
+                // SOLID FIX: Allow service to start without token - user can provide it later via web interface
+                _logger.LogWarning("No access token or request token available - service will start in token-required mode");
+                return false; // Return false but don't crash the service
             }
             catch (Exception ex)
             {
@@ -99,14 +103,14 @@ namespace KiteMarketDataService.Worker.Services
             }
         }
 
-        public async Task<List<string>> GetOptionInstrumentsAsync()
+        public Task<List<string>> GetOptionInstrumentsAsync()
         {
             try
             {
                 var instruments = new List<string>();
                 
                 // Common index option symbols for NSE with specific strikes
-                var indices = new[] { "NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY" };
+                var indices = new[] { "NIFTY", "BANKNIFTY" };
                 
                 foreach (var index in indices)
                 {
@@ -131,31 +135,15 @@ namespace KiteMarketDataService.Worker.Services
                         instruments.Add($"NFO:{index}24DEC52200CE");
                         instruments.Add($"NFO:{index}24DEC52200PE");
                     }
-                    // For FINNIFTY
-                    else if (index == "FINNIFTY")
-                    {
-                        instruments.Add($"NFO:{index}24DEC20000CE");
-                        instruments.Add($"NFO:{index}24DEC20000PE");
-                        instruments.Add($"NFO:{index}24DEC20100CE");
-                        instruments.Add($"NFO:{index}24DEC20100PE");
-                    }
-                    // For MIDCPNIFTY
-                    else if (index == "MIDCPNIFTY")
-                    {
-                        instruments.Add($"NFO:{index}24DEC12000CE");
-                        instruments.Add($"NFO:{index}24DEC12000PE");
-                        instruments.Add($"NFO:{index}24DEC12100CE");
-                        instruments.Add($"NFO:{index}24DEC12100PE");
-                    }
                 }
                 
                 _logger.LogInformation($"Generated {instruments.Count} option instruments for data collection");
-                return instruments;
+                return Task.FromResult(instruments);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get option instruments");
-                return new List<string>();
+                return Task.FromResult(new List<string>());
             }
         }
 
@@ -183,16 +171,18 @@ namespace KiteMarketDataService.Worker.Services
                 _logger.LogInformation($"Total instrument tokens to process: {instrumentTokens.Count}");
                 _logger.LogInformation($"Sample tokens: {string.Join(", ", instrumentTokens.Take(5))}...");
 
-                // Kite Connect allows max 500 instruments per request
+                // Kite Connect allows max 500 instruments per request, but let's use smaller batches for better reliability
+                var batchSize = 200; // Reduced from 500 to 200 for better reliability
                 var batches = instrumentTokens.Select((x, i) => new { Index = i, Value = x })
-                                       .GroupBy(x => x.Index / 500)
+                                       .GroupBy(x => x.Index / batchSize)
                                        .Select(g => g.Select(x => x.Value).ToList())
                                        .ToList();
 
-                _logger.LogInformation($"Created {batches.Count} batches (max 500 instruments per batch)");
+                _logger.LogInformation($"Created {batches.Count} batches (max {batchSize} instruments per batch)");
 
                 var allQuotes = new Dictionary<string, QuoteData>();
                 var batchNumber = 0;
+                var failedBatches = new List<int>();
 
                 foreach (var batch in batches)
                 {
@@ -219,7 +209,6 @@ namespace KiteMarketDataService.Worker.Services
                     
                     _logger.LogInformation($"API response received in {duration.TotalMilliseconds:F0}ms");
                     _logger.LogInformation($"Response status: {response.StatusCode}");
-                    _logger.LogInformation($"Response headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(";", h.Value)}"))}");
                     
                     if (response.IsSuccessStatusCode)
                     {
@@ -264,22 +253,106 @@ namespace KiteMarketDataService.Worker.Services
                         else
                         {
                             _logger.LogWarning($"Batch {batchNumber} response has no data. Full response: {content}");
+                            failedBatches.Add(batchNumber);
                         }
                     }
                     else
                     {
                         var errorContent = await response.Content.ReadAsStringAsync();
                         _logger.LogError($"Batch {batchNumber} failed. Status: {response.StatusCode}, Content: {errorContent}");
+                        failedBatches.Add(batchNumber);
                     }
 
                     // Add delay between batches to avoid rate limiting
-                    _logger.LogInformation($"Waiting 1 second before next batch...");
-                    await Task.Delay(1000);
+                    _logger.LogInformation($"Waiting 2 seconds before next batch...");
+                    await Task.Delay(2000); // Increased delay to 2 seconds
+                }
+
+                // Retry failed batches with smaller batch size
+                if (failedBatches.Any())
+                {
+                    _logger.LogWarning($"Retrying {failedBatches.Count} failed batches with smaller batch size...");
+                    
+                    foreach (var failedBatchNum in failedBatches)
+                    {
+                        var originalBatch = batches[failedBatchNum - 1]; // Convert to 0-based index
+                        
+                        // Split failed batch into smaller chunks
+                        var subBatchSize = 50; // Much smaller chunks for retry
+                        var subBatches = originalBatch.Select((x, i) => new { Index = i, Value = x })
+                                               .GroupBy(x => x.Index / subBatchSize)
+                                               .Select(g => g.Select(x => x.Value).ToList())
+                                               .ToList();
+                        
+                        _logger.LogInformation($"Retrying batch {failedBatchNum} with {subBatches.Count} sub-batches of size {subBatchSize}");
+                        
+                        foreach (var subBatch in subBatches)
+                        {
+                            var queryParams = string.Join("&", subBatch.Select(i => $"i={Uri.EscapeDataString(i)}"));
+                            var url = $"quote?{queryParams}";
+                            
+                            _httpClient.DefaultRequestHeaders.Remove("Authorization");
+                            _httpClient.DefaultRequestHeaders.Add("Authorization", $"token {_configuration["KiteConnect:ApiKey"]}:{_accessToken}");
+                            
+                            var response = await _httpClient.GetAsync(url);
+                            
+                            if (response.IsSuccessStatusCode)
+                            {
+                                var content = await response.Content.ReadAsStringAsync();
+                                var quoteResponse = JsonConvert.DeserializeObject<KiteQuoteResponse>(content);
+                                
+                                if (quoteResponse?.Data != null)
+                                {
+                                    foreach (var quote in quoteResponse.Data)
+                                    {
+                                        allQuotes[quote.Key] = quote.Value;
+                                    }
+                                    _logger.LogInformation($"Sub-batch retry successful. Added {quoteResponse.Data.Count} quotes");
+                                }
+                            }
+                            
+                            await Task.Delay(1000); // 1 second delay between sub-batches
+                        }
+                    }
                 }
 
                 _logger.LogInformation($"=== API CALLS COMPLETED ===");
                 _logger.LogInformation($"Total quotes collected: {allQuotes.Count}");
                 _logger.LogInformation($"Success rate: {(double)allQuotes.Count / instrumentTokens.Count * 100:F1}%");
+
+                // CRITICAL FIX: Ensure ALL instruments have quotes (even if Kite API doesn't return them)
+                // This is essential for LC/UC change tracking - non-traded instruments can still have circuit limit changes
+                var missingTokens = instrumentTokens.Where(token => !allQuotes.ContainsKey(token)).ToList();
+                if (missingTokens.Any())
+                {
+                    _logger.LogWarning($"Creating default quotes for {missingTokens.Count} missing instruments to ensure complete coverage");
+                    
+                    foreach (var missingToken in missingTokens)
+                    {
+                        // Create a default quote with zero values but valid structure
+                        allQuotes[missingToken] = new QuoteData
+                        {
+                            InstrumentToken = long.Parse(missingToken),
+                            LastPrice = 0,
+                            LastQuantity = 0,
+                            AveragePrice = 0,
+                            Volume = 0,
+                            BuyQuantity = 0,
+                            SellQuantity = 0,
+                            OHLC = new OHLCData { Open = 0, High = 0, Low = 0, Close = 0 },
+                            NetChange = 0,
+                            OpenInterest = 0,
+                            OiDayHigh = 0,
+                            OiDayLow = 0,
+                            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            LastTradeTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            LowerCircuitLimit = 0,
+                            UpperCircuitLimit = 0
+                        };
+                    }
+                    
+                    _logger.LogInformation($"✅ Added default quotes for {missingTokens.Count} missing instruments. Total quotes now: {allQuotes.Count}");
+                }
 
                 return new KiteQuoteResponse
                 {
@@ -376,7 +449,7 @@ namespace KiteMarketDataService.Worker.Services
                     // Log all instruments with "SENSEX" in any field
                     var allSensexRelated = instruments.Where(i => 
                         i.TradingSymbol.Contains("SENSEX") || 
-                        i.Name.Contains("SENSEX") ||
+                        (i.Name?.Contains("SENSEX") ?? false) ||
                         i.Segment.Contains("SENSEX")).ToList();
                     _logger.LogInformation($"Found {allSensexRelated.Count} total SENSEX-related instruments (any field):");
                     foreach (var sensex in allSensexRelated.Take(10))
@@ -399,8 +472,56 @@ namespace KiteMarketDataService.Worker.Services
                     var uniqueSymbols = instruments.Select(i => i.TradingSymbol).Distinct().Take(20).ToList();
                     _logger.LogInformation($"Sample unique trading symbols: {string.Join(", ", uniqueSymbols)}");
                     
-                    // Strictly include ONLY index option contracts for major indices
-                    var allowedPrefixes = new[] { "NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "SENSEX" };
+                    // Include BOTH spot indices AND index option contracts for major indices
+                    var allowedPrefixes = new[] { "NIFTY", "BANKNIFTY", "SENSEX" };
+                    
+                    // First, collect INDEX spot data (use current month FUTURES as INDEX proxies)
+                    var spotIndices = instruments
+                        .Where(i =>
+                            // Use current month FUTURES contracts to get INDEX spot prices
+                            i.InstrumentType == "FUT" &&
+                            i.Strike == 0 &&
+                            allowedPrefixes.Any(p => i.TradingSymbol.StartsWith(p)) &&
+                            !i.TradingSymbol.StartsWith("NIFTYNXT") &&
+                            // Get the most current month futures (these track the index closely)
+                            (i.TradingSymbol.Contains("25SEP") || i.TradingSymbol.Contains("25OCT") || 
+                             i.TradingSymbol.Contains("25NOV") || i.TradingSymbol.Contains("25DEC"))
+                        )
+                        .GroupBy(i => {
+                            // Extract base index name (NIFTY, SENSEX, etc.)
+                            var symbol = i.TradingSymbol;
+                            if (symbol.StartsWith("NIFTY")) return "NIFTY";
+                            if (symbol.StartsWith("BANKNIFTY")) return "BANKNIFTY";
+                            if (symbol.StartsWith("SENSEX")) return "SENSEX";
+                            return symbol;
+                        })
+                        .Select(g => {
+                            // Take the most current contract for each index
+                            var currentContract = g.OrderBy(i => i.TradingSymbol).First();
+                            
+                            // Create a synthetic INDEX instrument from the FUTURES contract
+                            var indexInstrument = new Instrument
+                            {
+                                InstrumentToken = currentContract.InstrumentToken,
+                                ExchangeToken = currentContract.ExchangeToken,
+                                TradingSymbol = g.Key, // Use base index name (NIFTY, SENSEX, etc.)
+                                Exchange = currentContract.Exchange,
+                                InstrumentType = "INDEX", // Mark as INDEX type
+                                Strike = 0,
+                                Expiry = null, // INDEX doesn't expire
+                                Segment = currentContract.Segment,
+                                Name = g.Key,
+                                TickSize = currentContract.TickSize,
+                                LotSize = currentContract.LotSize,
+                                LastPrice = currentContract.LastPrice,
+                                CreatedAt = currentContract.CreatedAt,
+                                UpdatedAt = currentContract.UpdatedAt
+                            };
+                            return indexInstrument;
+                        })
+                        .ToList();
+                    
+                    // Then, collect option contracts
                     var optionInstruments = instruments
                         .Where(i =>
                             (i.InstrumentType == "CE" || i.InstrumentType == "PE") &&
@@ -408,6 +529,49 @@ namespace KiteMarketDataService.Worker.Services
                             // Exclude NIFTYNXT family explicitly
                             !i.TradingSymbol.StartsWith("NIFTYNXT"))
                         .ToList();
+                    
+                    // Combine both collections
+                    var allInstruments = new List<Instrument>();
+                    allInstruments.AddRange(spotIndices);
+                    allInstruments.AddRange(optionInstruments);
+                    
+                    _logger.LogInformation($"Found {spotIndices.Count} spot indices and {optionInstruments.Count} option instruments");
+                    _logger.LogInformation($"Total instruments to collect: {allInstruments.Count}");
+                    
+                    // Log sample INDEX instruments created from FUTURES
+                    if (spotIndices.Any())
+                    {
+                        _logger.LogInformation("✅ Sample INDEX instruments created from FUTURES:");
+                        foreach (var spot in spotIndices.Take(5))
+                        {
+                            _logger.LogInformation($"  ✅ INDEX: {spot.TradingSymbol} - Token: {spot.InstrumentToken} - Exchange: {spot.Exchange} - Type: '{spot.InstrumentType}' - Strike: {spot.Strike}");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("❌ No spot indices found! Checking what instruments are available...");
+                        
+                        // Log all instruments that start with allowed prefixes to debug
+                        var allMatchingSymbols = instruments.Where(i => allowedPrefixes.Any(p => i.TradingSymbol.StartsWith(p))).ToList();
+                        _logger.LogInformation($"Found {allMatchingSymbols.Count} instruments matching allowed prefixes:");
+                        foreach (var match in allMatchingSymbols.Take(10))
+                        {
+                            _logger.LogInformation($"  Match: {match.TradingSymbol} - Type: '{match.InstrumentType}' - Strike: {match.Strike} - Segment: {match.Segment} - Name: {match.Name}");
+                        }
+                        
+                        // Specifically look for potential INDEX instruments
+                        var potentialIndexInstruments = instruments.Where(i => 
+                            allowedPrefixes.Any(p => i.TradingSymbol.StartsWith(p)) &&
+                            i.Strike == 0 &&
+                            (string.IsNullOrEmpty(i.InstrumentType) || i.InstrumentType == "INDEX")
+                        ).ToList();
+                        
+                        _logger.LogInformation($"Found {potentialIndexInstruments.Count} potential INDEX instruments:");
+                        foreach (var potential in potentialIndexInstruments.Take(5))
+                        {
+                            _logger.LogInformation($"  Potential INDEX: {potential.TradingSymbol} - Type: '{potential.InstrumentType}' - Strike: {potential.Strike} - Segment: {potential.Segment} - Name: {potential.Name}");
+                        }
+                    }
 
                     _logger.LogInformation($"Found {optionInstruments.Count} index option instruments (CE/PE) for allowed indices only");
                     
@@ -428,8 +592,6 @@ namespace KiteMarketDataService.Worker.Services
                         var indexCounts = optionInstruments
                             .GroupBy(i => i.TradingSymbol.StartsWith("NIFTY") && !i.TradingSymbol.StartsWith("NIFTYNXT") ? "NIFTY" :
                                              i.TradingSymbol.StartsWith("BANKNIFTY") ? "BANKNIFTY" :
-                                             i.TradingSymbol.StartsWith("FINNIFTY") ? "FINNIFTY" :
-                                             i.TradingSymbol.StartsWith("MIDCPNIFTY") ? "MIDCPNIFTY" :
                                              i.TradingSymbol.StartsWith("SENSEX") ? "SENSEX" : "OTHER")
                             .Select(g => new { Index = g.Key, Count = g.Count() })
                             .OrderByDescending(x => x.Count)
@@ -442,7 +604,18 @@ namespace KiteMarketDataService.Worker.Services
                         }
                     }
                     
-                    return optionInstruments;
+                    // Save ALL instruments to FullInstruments table for INDEX detection
+                    try
+                    {
+                        await _fullInstrumentService.SaveAllInstrumentsAsync(instruments);
+                        _logger.LogInformation("✅ Saved all instruments to FullInstruments table");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to save instruments to FullInstruments table");
+                    }
+                    
+                    return allInstruments;
                 }
                 else
                 {
@@ -560,5 +733,127 @@ namespace KiteMarketDataService.Worker.Services
                 return null;
             }
         }
+
+        /// <summary>
+        /// Get historical data for an instrument from Kite API
+        /// </summary>
+        public async Task<List<HistoricalCandleData>?> GetHistoricalDataAsync(long instrumentToken, DateTime fromDate, DateTime toDate)
+        {
+            try
+            {
+                _logger.LogInformation($"Fetching historical data for token {instrumentToken} from {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}");
+
+                if (string.IsNullOrEmpty(_accessToken))
+                {
+                    _logger.LogError("Access token not available. Please authenticate first.");
+                    return null;
+                }
+
+                // Build the historical API URL with proper date format (yyyy-mm-dd hh:mm:ss)
+                var fromDateStr = fromDate.ToString("yyyy-MM-dd 00:00:00");
+                var toDateStr = toDate.ToString("yyyy-MM-dd 23:59:59");
+                var url = $"https://api.kite.trade/instruments/historical/{instrumentToken}/day?from={fromDateStr}&to={toDateStr}";
+
+                _logger.LogInformation($"Historical API URL: {url}");
+
+                // Create request with authentication headers
+                var apiKey = _configuration["KiteConnect:ApiKey"];
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("Authorization", $"token {apiKey}:{_accessToken}");
+                request.Headers.Add("X-Kite-Version", "3");
+
+                // Make the API call
+                using var response = await _httpClient.SendAsync(request);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation($"Historical API response received: {jsonContent.Length} characters");
+                    _logger.LogInformation($"Historical API response content: {jsonContent}"); // DEBUG: See actual response
+
+                    // Parse the response
+                    var options = new System.Text.Json.JsonSerializerOptions 
+                    { 
+                        PropertyNameCaseInsensitive = true,
+                        WriteIndented = true 
+                    };
+                    var historicalResponse = System.Text.Json.JsonSerializer.Deserialize<HistoricalDataResponse>(jsonContent, options);
+                    
+                    _logger.LogInformation($"Deserialized response - Status: {historicalResponse?.Status}, Has Data: {historicalResponse?.Data != null}, Has Candles: {historicalResponse?.Data?.Candles != null}");
+                    
+                    if (historicalResponse?.Data?.Candles != null && historicalResponse.Data.Candles.Any())
+                    {
+                        var historicalData = new List<HistoricalCandleData>();
+                        
+                        _logger.LogInformation($"Processing {historicalResponse.Data.Candles.Count} candles from API response");
+                        
+                        foreach (var candle in historicalResponse.Data.Candles)
+                        {
+                            try
+                            {
+                                if (candle != null && candle.Count >= 5)
+                                {
+                                    // Handle JsonElement type conversion
+                                    var jsonElement = (System.Text.Json.JsonElement)candle[0];
+                                    var dateStr = jsonElement.GetString();
+                                    
+                                    var candleData = new HistoricalCandleData
+                                    {
+                                        Date = DateTime.Parse(dateStr!),
+                                        Open = ((System.Text.Json.JsonElement)candle[1]).GetDecimal(),
+                                        High = ((System.Text.Json.JsonElement)candle[2]).GetDecimal(),
+                                        Low = ((System.Text.Json.JsonElement)candle[3]).GetDecimal(),
+                                        Close = ((System.Text.Json.JsonElement)candle[4]).GetDecimal(),
+                                        Volume = candle.Count > 5 ? ((System.Text.Json.JsonElement)candle[5]).GetInt64() : 0
+                                    };
+                                    
+                                    historicalData.Add(candleData);
+                                    _logger.LogDebug($"Parsed candle: {candleData.Date:yyyy-MM-dd} O={candleData.Open} H={candleData.High} L={candleData.Low} C={candleData.Close}");
+                                }
+                            }
+                            catch (Exception parseEx)
+                            {
+                                _logger.LogWarning($"Failed to parse candle: {parseEx.Message}");
+                            }
+                        }
+
+                        _logger.LogInformation($"✅ Successfully fetched {historicalData.Count} historical records for token {instrumentToken}");
+                        return historicalData;
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"No historical data found for token {instrumentToken}");
+                        return new List<HistoricalCandleData>();
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError($"Historical API request failed: {response.StatusCode} - {errorContent}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching historical data for token {instrumentToken}");
+                return null;
+            }
+        }
+    }
+
+    // Historical data response models
+    public class HistoricalDataResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string? Status { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public HistoricalApiData? Data { get; set; }
+    }
+
+    public class HistoricalApiData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("candles")]
+        public List<List<object>>? Candles { get; set; }
     }
 } 

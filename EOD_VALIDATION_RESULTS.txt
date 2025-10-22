@@ -1,0 +1,6 @@
+Msg 156, Level 15, State 1, Server LAPTOP-B68L4IP9, Line 9
+Incorrect syntax near the keyword 'Open'.
+Msg 156, Level 15, State 1, Server LAPTOP-B68L4IP9, Line 28
+Incorrect syntax near the keyword 'Open'.
+Msg 1018, Level 15, State 1, Server LAPTOP-B68L4IP9, Line 46
+Incorrect syntax near 'Index'. If this is intended as a part of a table hint, A WITH keyword and parenthesis are now required. See SQL Server Books Online for proper syntax.

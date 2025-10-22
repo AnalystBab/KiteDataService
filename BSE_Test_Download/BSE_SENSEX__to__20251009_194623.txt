@@ -1,0 +1,13 @@
+﻿BSE Historical Derivatives Data
+===============================
+Date Range: 08/10/2025 to 08/10/2025
+Instrument Type: Index Options Call
+Underlying Asset: SENSEX
+
+Key Data Points:
+- SENSEX Spot Value: 81,773.66 (from BSE website)
+- Current SENSEX: 82,172.10 (live value)
+- Data Source: https://www.bseindia.com/markets/Derivatives/DeriReports/DeriHistorical.aspx
+
+Note: This is a test file. For actual data, use the BSE website directly.
+Generated: 10/09/2025 19:46:23

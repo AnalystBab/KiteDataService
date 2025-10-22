@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Test</title>
+    <style>
+        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; position: fixed; left: 0; top: 0; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .nav-link { display: block; padding: 10px; color: #bdc3c7; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background: rgba(52, 152, 219, 0.2); color: white; }
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Navigation Test</h3>
+        <a href="#" class="nav-link active" data-page="dashboard">Dashboard</a>
+        <a href="#" class="nav-link" data-page="predictions">Predictions</a>
+        <a href="#" class="nav-link" data-page="analysis">Analysis</a>
+    </div>
+    
+    <div class="main-content">
+        <div id="dashboard-page" class="page-content active">
+            <h1>Dashboard Page</h1>
+            <p>This is the dashboard content.</p>
+        </div>
+        
+        <div id="predictions-page" class="page-content">
+            <h1>Predictions Page</h1>
+            <p>This is the predictions content.</p>
+        </div>
+        
+        <div id="analysis-page" class="page-content">
+            <h1>Analysis Page</h1>
+            <p>This is the analysis content.</p>
+        </div>
+    </div>
+
+    <script>
+        function showPage(pageId) {
+            console.log('Switching to:', pageId);
+            
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageId + '-page').classList.add('active');
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showPage(this.dataset.page);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

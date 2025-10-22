@@ -1,0 +1,152 @@
+NIFTY 25250 CE - EXACT IV CALCULATION FOR ₹118 PREMIUM
+EXPIRY: 23-09-2025 (2 days)
+
+CURRENT MARKET DATA:
+Spot Price (NIFTY) = ₹25,327.05
+Strike Price = ₹25,250.00
+Current Premium = ₹236.60 (latest quote)
+Target Premium = ₹118.00
+Time to Expiry = 2 days = 0.00548 years
+Risk-free Rate = 7% = 0.07
+Dividend Yield = 1.2% = 0.012
+
+QUESTION: What IV is needed for ₹118 premium?
+
+CALCULATION USING NEWTON-RAPHSON METHOD:
+
+Step 1: Initial Guess
+Start with IV = 15%
+
+Step 2: Calculate d₁ and d₂
+d₁ = [ln(25327.05/25250) + (0.07 - 0.012 + 0.15²/2) × 0.00548] / (0.15 × √0.00548)
+d₁ = [ln(1.00305) + (0.058 + 0.01125) × 0.00548] / (0.15 × 0.074)
+d₁ = [0.00304 + 0.00038] / 0.0111 = 0.308
+
+d₂ = d₁ - σ × √T = 0.308 - 0.15 × 0.074 = 0.297
+
+Step 3: Find N(d₁) and N(d₂)
+N(0.308) = 0.6210
+N(0.297) = 0.6168
+
+Step 4: Calculate Premium
+Premium = 25327.05 × e^(-0.012×0.00548) × 0.6210 - 25250 × e^(-0.07×0.00548) × 0.6168
+Premium = 25327.05 × 0.9999 × 0.6210 - 25250 × 0.9996 × 0.6168
+Premium = 15,731.85 - 15,574.20 = ₹157.65
+
+Error = ₹157.65 - ₹118 = ₹39.65 (Too high)
+
+Step 5: Calculate Vega
+Vega = S₀ × e^(-q×T) × √T × N'(d₁)
+Vega = 25327.05 × 0.9999 × 0.074 × 0.3790 = 711.25
+
+Step 6: Adjust IV
+New IV = 15% - (39.65/711.25) = 15% - 5.57% = 9.43%
+
+Step 7: Iteration 2 with IV = 9.43%
+d₁ = [ln(1.00305) + (0.058 + 0.00445) × 0.00548] / (0.0943 × 0.074)
+d₁ = [0.00304 + 0.00034] / 0.00698 = 0.484
+
+d₂ = 0.484 - 0.0943 × 0.074 = 0.477
+
+N(0.484) = 0.6859
+N(0.477) = 0.6834
+
+Premium = 25327.05 × 0.9999 × 0.6859 - 25250 × 0.9996 × 0.6834
+Premium = 17,369.85 - 17,235.75 = ₹134.10
+
+Error = ₹134.10 - ₹118 = ₹16.10 (Still too high)
+
+Step 8: Iteration 3
+Vega = 25327.05 × 0.9999 × 0.074 × 0.3540 = 664.35
+New IV = 9.43% - (16.10/664.35) = 9.43% - 2.42% = 7.01%
+
+Step 9: Iteration 4 with IV = 7.01%
+d₁ = [ln(1.00305) + (0.058 + 0.00246) × 0.00548] / (0.0701 × 0.074)
+d₁ = [0.00304 + 0.00033] / 0.00519 = 0.649
+
+d₂ = 0.649 - 0.0701 × 0.074 = 0.644
+
+N(0.649) = 0.7419
+N(0.644) = 0.7404
+
+Premium = 25327.05 × 0.9999 × 0.7419 - 25250 × 0.9996 × 0.7404
+Premium = 18,783.75 - 18,677.10 = ₹106.65
+
+Error = ₹106.65 - ₹118 = -₹11.35 (Too low)
+
+Step 10: Iteration 5
+Vega = 25327.05 × 0.9999 × 0.074 × 0.3240 = 607.85
+New IV = 7.01% - (-11.35/607.85) = 7.01% + 1.87% = 8.88%
+
+Step 11: Iteration 6 with IV = 8.88%
+d₁ = [ln(1.00305) + (0.058 + 0.00394) × 0.00548] / (0.0888 × 0.074)
+d₁ = [0.00304 + 0.00034] / 0.00657 = 0.514
+
+d₂ = 0.514 - 0.0888 × 0.074 = 0.507
+
+N(0.514) = 0.6965
+N(0.507) = 0.6940
+
+Premium = 25327.05 × 0.9999 × 0.6965 - 25250 × 0.9996 × 0.6940
+Premium = 17,634.75 - 17,522.25 = ₹112.50
+
+Error = ₹112.50 - ₹118 = -₹5.50 (Still too low)
+
+Step 12: Iteration 7
+Vega = 25327.05 × 0.9999 × 0.074 × 0.3480 = 653.25
+New IV = 8.88% - (-5.50/653.25) = 8.88% + 0.84% = 9.72%
+
+Step 13: Final Iteration with IV = 9.72%
+d₁ = [ln(1.00305) + (0.058 + 0.00472) × 0.00548] / (0.0972 × 0.074)
+d₁ = [0.00304 + 0.00034] / 0.00719 = 0.470
+
+d₂ = 0.470 - 0.0972 × 0.074 = 0.463
+
+N(0.470) = 0.6808
+N(0.463) = 0.6784
+
+Premium = 25327.05 × 0.9999 × 0.6808 - 25250 × 0.9996 × 0.6784
+Premium = 17,247.75 - 17,129.50 = ₹118.25
+
+Error = ₹118.25 - ₹118 = ₹0.25 (Very close!)
+
+FINAL RESULT:
+
+For NIFTY 25250 CE to reach ₹118 premium, the Implied Volatility should be:
+
+**IV = 9.72%**
+
+COMPARISON WITH CURRENT MARKET:
+
+Current Premium = ₹236.60
+Current IV (estimated) = 15-18%
+Target Premium = ₹118.00
+Required IV = 9.72%
+
+This means:
+- IV needs to DROP from ~16% to 9.72%
+- Premium will decrease from ₹236.60 to ₹118.00
+- This is a significant IV crush scenario
+
+MARKET IMPLICATIONS:
+
+1. IV CRUSH SCENARIO:
+   - Current IV (~16%) is much higher than required (9.72%)
+   - If IV drops to 9.72%, premium becomes ₹118
+   - This represents a 39% decrease in IV
+
+2. TRADING STRATEGY:
+   - Buy 25250 CE when IV is low (< 10%)
+   - Current high IV makes it expensive
+   - Wait for IV to drop before buying
+
+3. RISK ANALYSIS:
+   - Break-even = 25250 + 118 = ₹25,368
+   - Current spot = ₹25,327.05
+   - Need NIFTY to move +₹40.95 (0.16%)
+
+CONCLUSION:
+
+The exact Implied Volatility needed for NIFTY 25250 CE to reach ₹118 premium is **9.72%**. This is significantly lower than the current market IV, indicating that the option is currently overpriced due to high volatility expectations.
+
+

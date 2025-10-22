@@ -1,0 +1,79 @@
+═══════════════════════════════════════════════════════════════
+    🎯 KITE MARKET DATA SERVICE - DEPLOYMENT GUIDE
+═══════════════════════════════════════════════════════════════
+
+📦 AUTOMATED DEPLOYMENT OPTIONS:
+
+1️⃣  QUICK DEPLOY (One-Time)
+   └─ Double-click: QuickDeploy.bat
+   └─ What it does:
+      ✅ Builds the service
+      ✅ Auto-installs as Windows Service
+      ✅ Auto-starts the service
+      ✅ Creates desktop shortcuts
+      ✅ Done in 30 seconds!
+
+2️⃣  AUTO-DEPLOY ON CODE CHANGES (Developer Mode)
+   └─ Double-click: WatchAndAutoDeploy.bat
+   └─ What it does:
+      ✅ Watches for .cs file changes
+      ✅ Auto-builds when code changes
+      ✅ Auto-deploys if build succeeds
+      ✅ Keeps running until you stop it
+      ✅ Perfect for active development!
+
+═══════════════════════════════════════════════════════════════
+
+🚀 FIRST TIME SETUP (ONE-TIME):
+
+1. Run QuickDeploy.bat (as Administrator)
+2. Check Desktop → "Kite Market Data Service" folder
+3. Open "Manage Tokens" → Update your Kite token
+4. Service is now running 24/7!
+
+═══════════════════════════════════════════════════════════════
+
+🔄 WHEN YOU MODIFY CODE:
+
+OPTION A - Manual Deploy (Recommended):
+   1. Double-click: QuickDeploy.bat
+   2. Done! Service auto-restarts with new code
+
+OPTION B - Auto Deploy on Save (Developer Mode):
+   1. Double-click: WatchAndAutoDeploy.bat
+   2. Keep it running in background
+   3. Every time you save .cs files:
+      → Auto-builds
+      → Auto-deploys
+      → Service restarts
+   4. Stop watching when done (Ctrl+C)
+
+═══════════════════════════════════════════════════════════════
+
+🌐 WEB ACCESS:
+
+📊 Main Dashboard:
+   http://localhost:5000
+
+🔑 Token Management:
+   http://localhost:5000/token-management.html
+
+═══════════════════════════════════════════════════════════════
+
+🎯 DESKTOP SHORTCUTS (Auto-Created):
+
+📁 Desktop/Kite Market Data Service/
+   ├─ 🌐 Open Web Dashboard.lnk
+   └─ 🔑 Manage Tokens.lnk
+
+═══════════════════════════════════════════════════════════════
+
+✅ BUILD STATUS: SUCCESS (No Errors)
+
+The service is ready to deploy!
+
+═══════════════════════════════════════════════════════════════
+
+
+
+

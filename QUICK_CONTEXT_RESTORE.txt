@@ -1,0 +1,28 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                   📋 COPY-PASTE THIS TO NEW AI ASSISTANT                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+Hi, I'm Babu. Working on Kite Market Data Service (production trading system).
+
+📁 PROJECT PATH:
+C:\Users\babu\Documents\Services\KiteMarketDataService.Worker
+
+📖 READ THESE FILES FIRST (in order):
+1. CONTEXT_RECOVERY_GUIDE.md
+2. PROJECT_MASTER_REFERENCE.md  
+3. QUICK_CHEAT_SHEET.md
+
+🎯 KEY CONCEPT:
+BusinessDate = The trading day data belongs to (NOT collection time)
+Example: Data at 8:30 AM → BusinessDate = PREVIOUS day (market opens 9:15 AM)
+
+🔧 RECENT FIX (Oct 8, 2025):
+Historical data collection now time-aware (after 3:30 PM includes TODAY's data)
+File: Services/HistoricalSpotDataService.cs, lines 86-91
+
+✅ CURRENT STATUS: All working correctly
+
+Please read the docs and confirm before we start.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+

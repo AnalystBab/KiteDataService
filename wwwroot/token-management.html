@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kite Token Management</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .content {
+            padding: 30px;
+        }
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #28a745;
+        }
+        .status-card.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .status-card.warning {
+            border-left-color: #ffc107;
+            background: #fffbf0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .link-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .link-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .kite-link {
+            display: inline-block;
+            background: #ff6b35;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .kite-link:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .instructions {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+        .status-stopped {
+            background: #dc3545;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .service-controls {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Kite Token Management</h1>
+            <p>Manage your Kite Connect tokens for 24/7 operation</p>
+        </div>
+        
+        <div class="content">
+            <!-- Service Status -->
+            <div id="statusCard" class="status-card">
+                <h3><span id="statusIndicator" class="status-indicator status-stopped"></span>Service Status</h3>
+                <p id="statusText">Checking service status...</p>
+                <div id="serviceControls" class="service-controls">
+                    <button id="startServiceBtn" class="btn btn-success" onclick="startService()" style="display: none;">
+                        <i class="fas fa-play"></i> Start Service
+                    </button>
+                    <button id="stopServiceBtn" class="btn btn-danger" onclick="stopService()" style="display: none;">
+                        <i class="fas fa-stop"></i> Stop Service
+                    </button>
+                    <button id="restartServiceBtn" class="btn btn-warning" onclick="restartService()" style="display: none;">
+                        <i class="fas fa-redo"></i> Restart Service
+                    </button>
+                    <button class="btn btn-secondary" onclick="checkServiceStatus()">
+                        <i class="fas fa-sync"></i> Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <!-- Token Management Form -->
+            <div id="tokenForm">
+                <h3>🔑 Update Request Token</h3>
+                <form id="tokenUpdateForm">
+                    <div class="form-group">
+                        <label for="requestToken">Request Token:</label>
+                        <input type="text" id="requestToken" placeholder="Enter your request token here..." required>
+                    </div>
+                    <button type="submit" class="btn">Update Token</button>
+                    <button type="button" class="btn btn-secondary" onclick="checkServiceStatus()">Refresh Status</button>
+                </form>
+            </div>
+
+            <!-- Kite Login Link -->
+            <div class="link-section">
+                <h3>🔗 Get New Request Token</h3>
+                <p>Click the link below to login to Kite and get a new request token:</p>
+                <a href="https://kite.trade/connect/login?api_key=kw3ptb0zmocwupmo" target="_blank" class="kite-link">
+                    🚀 Login to Kite Connect
+                </a>
+                <p><small>After login, copy the request token from the URL and paste it above.</small></p>
+            </div>
+
+            <!-- Instructions -->
+            <div class="instructions">
+                <h3>📋 Instructions</h3>
+                <ol>
+                    <li>Use the service control buttons above to start/stop the service</li>
+                    <li>Click "Login to Kite Connect" button above</li>
+                    <li>Login with your Kite credentials</li>
+                    <li>Copy the request token from the URL after login</li>
+                    <li>Paste the token in the form above</li>
+                    <li>Click "Update Token" to save</li>
+                    <li>Service will automatically use the new token</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check service status on page load
+        window.onload = function() {
+            checkServiceStatus();
+        };
+
+        async function checkServiceStatus() {
+            try {
+                const response = await fetch('/api/TokenManagement/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    const statusMessage = data.hasRequestToken ? 
+                        `Service is running with token (${data.requestTokenLength} chars)` : 
+                        'Service is running but needs token';
+                    updateStatus(data.isRunning, statusMessage);
+                } else {
+                    updateStatus(false, 'Service is NOT RUNNING');
+                }
+            } catch (error) {
+                updateStatus(false, 'Service is NOT RUNNING');
+            }
+        }
+
+        function updateStatus(isRunning, message) {
+            const statusCard = document.getElementById('statusCard');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            statusText.textContent = message;
+            
+            if (isRunning) {
+                statusCard.className = 'status-card';
+                statusIndicator.className = 'status-indicator status-running';
+            } else {
+                statusCard.className = 'status-card error';
+                statusIndicator.className = 'status-indicator status-stopped';
+            }
+        }
+
+        function updateServiceControls(isRunning, canStart, canStop) {
+            const startBtn = document.getElementById('startServiceBtn');
+            const stopBtn = document.getElementById('stopServiceBtn');
+            const restartBtn = document.getElementById('restartServiceBtn');
+
+            if (canStart) {
+                startBtn.style.display = 'inline-block';
+            } else {
+                startBtn.style.display = 'none';
+            }
+
+            if (canStop) {
+                stopBtn.style.display = 'inline-block';
+                restartBtn.style.display = 'inline-block';
+            } else {
+                stopBtn.style.display = 'none';
+                restartBtn.style.display = 'none';
+            }
+        }
+
+        async function startService() {
+            try {
+                const response = await fetch('/api/servicecontrol/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ ' + data.Message);
+                    checkServiceStatus();
+                } else {
+                    const error = await response.json();
+                    alert('❌ ' + error.Message);
+                }
+            } catch (error) {
+                alert('❌ Error starting service: ' + error.message);
+            }
+        }
+
+        async function stopService() {
+            if (!confirm('Are you sure you want to stop the service?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/servicecontrol/stop', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ ' + data.Message);
+                    checkServiceStatus();
+                } else {
+                    const error = await response.json();
+                    alert('❌ ' + error.Message);
+                }
+            } catch (error) {
+                alert('❌ Error stopping service: ' + error.message);
+            }
+        }
+
+        async function restartService() {
+            if (!confirm('Are you sure you want to restart the service?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/servicecontrol/restart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ ' + data.Message);
+                    checkServiceStatus();
+                } else {
+                    const error = await response.json();
+                    alert('❌ ' + error.Message);
+                }
+            } catch (error) {
+                alert('❌ Error restarting service: ' + error.message);
+            }
+        }
+
+        // Handle token update form
+        document.getElementById('tokenUpdateForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const requestToken = document.getElementById('requestToken').value.trim();
+            if (!requestToken) {
+                alert('Please enter a request token');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/TokenManagement/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ requestToken: requestToken })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('✅ ' + data.message);
+                    document.getElementById('requestToken').value = '';
+                    checkServiceStatus();
+                } else {
+                    const error = await response.json();
+                    alert('❌ ' + error.message);
+                }
+            } catch (error) {
+                alert('❌ Error updating token. Please check if service is running.');
+            }
+        });
+    </script>
+</body>
+</html>

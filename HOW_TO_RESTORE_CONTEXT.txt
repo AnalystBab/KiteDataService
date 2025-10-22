@@ -1,0 +1,40 @@
+================================================================================
+  COPY THIS TEXT AND SEND TO NEW AI ASSISTANT WHEN CONTEXT IS LOST
+================================================================================
+
+Hi, I'm Babu working on the Kite Market Data Service project.
+
+Please read these files IN ORDER to understand the project:
+
+1. CONTEXT_RECOVERY_GUIDE.md
+2. PROJECT_MASTER_REFERENCE.md
+3. QUICK_CHEAT_SHEET.md
+
+Project Location:
+C:\Users\babu\Documents\Services\KiteMarketDataService.Worker
+
+Key Context:
+- This is a production trading system for Indian stock market
+- Collects real-time NIFTY/SENSEX/BANKNIFTY options data via Kite Connect API
+- MOST CRITICAL: BusinessDate calculation (the trading day data belongs to)
+- Recent major fix (Oct 8, 2025): Time-aware historical data collection after 3:30 PM
+
+Current Status:
+- All systems working correctly
+- BusinessDate logic is accurate
+- Service can restart anytime (self-healing)
+
+Core Files to Review:
+- Services/BusinessDateCalculationService.cs (BusinessDate logic)
+- Services/HistoricalSpotDataService.cs (Historical data with time-aware fetching)
+- Worker.cs (Main service orchestration)
+
+Critical Concept:
+BusinessDate ≠ Collection Time
+- Data at 8:30 AM Monday → BusinessDate = Previous Friday (market opens 9:15 AM)
+- BusinessDate calculated from: NIFTY spot → nearest strike → Last Trade Time (LTT)
+
+Please confirm you've read the documentation before we proceed.
+
+================================================================================
+

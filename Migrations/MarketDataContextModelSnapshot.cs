@@ -74,7 +74,121 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("TradingDate", "TradingSymbol");
 
-                    b.ToTable("CircuitLimits");
+                    b.ToTable("CircuitLimits", (string)null);
+                });
+
+            modelBuilder.Entity("KiteMarketDataService.Worker.Models.CircuitLimitChangeHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ChangeTimestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Close")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("High")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("IndexName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("InstrumentToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("LastTradedPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Low")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("LowerCircuit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("MarketHourFlag")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Open")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("OptionType")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<decimal>("SpotClose")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("SpotHigh")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("SpotLastPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("SpotLow")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("SpotOpen")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Strike")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<TimeSpan>("TradedTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("TradingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TradingSymbol")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("UpperCircuit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangeTimestamp");
+
+                    b.HasIndex("ExpiryDate");
+
+                    b.HasIndex("IndexName");
+
+                    b.HasIndex("InstrumentToken");
+
+                    b.HasIndex("Strike");
+
+                    b.HasIndex("TradingDate");
+
+                    b.HasIndex("TradingDate", "IndexName", "Strike", "OptionType", "ExpiryDate");
+
+                    b.ToTable("CircuitLimitChangeHistory", (string)null);
                 });
 
             modelBuilder.Entity("KiteMarketDataService.Worker.Models.CircuitLimitChangeRecord", b =>
@@ -210,7 +324,7 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("TradingDate");
 
-                    b.ToTable("CircuitLimitChanges");
+                    b.ToTable("CircuitLimitChanges", (string)null);
                 });
 
             modelBuilder.Entity("KiteMarketDataService.Worker.Models.DailyMarketSnapshot", b =>
@@ -309,7 +423,92 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("TradingDate");
 
-                    b.ToTable("DailyMarketSnapshots");
+                    b.ToTable("DailyMarketSnapshots", (string)null);
+                });
+
+            modelBuilder.Entity("KiteMarketDataService.Worker.Models.FullInstrument", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Exchange")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<long>("ExchangeToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("Expiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IndexName")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("InstrumentToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("InstrumentType")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool>("IsIndex")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LastPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("LotSize")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Segment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Strike")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("TickSize")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("TradingSymbol")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Exchange");
+
+                    b.HasIndex("IndexName");
+
+                    b.HasIndex("InstrumentType");
+
+                    b.HasIndex("IsIndex");
+
+                    b.HasIndex("TradingSymbol");
+
+                    b.HasIndex("IsIndex", "IndexName");
+
+                    b.ToTable("FullInstruments", (string)null);
                 });
 
             modelBuilder.Entity("KiteMarketDataService.Worker.Models.Instrument", b =>
@@ -375,7 +574,266 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("TradingSymbol");
 
-                    b.ToTable("Instruments");
+                    b.ToTable("Instruments", (string)null);
+                });
+
+            modelBuilder.Entity("KiteMarketDataService.Worker.Models.IntradayTickData", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("AveragePrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("BreakEvenPoint")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("BusinessDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("BuyQuantity")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("ClosePrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ConfidenceScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DataSource")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("Delta")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Gamma")
+                        .HasPrecision(10, 8)
+                        .HasColumnType("decimal(10,8)");
+
+                    b.Property<bool>("HasValidData")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("HighPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("HistoricalVolatility")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("ImpliedVolatility")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("IndexName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("InstrumentToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("IntrinsicValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("IsMarketOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LastPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<long>("LastQuantity")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("LowPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("LowerCircuitLimit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("MarketSentiment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("MaximumGain")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("MaximumLoss")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Moneyness")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("NetChange")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("OiDayHigh")
+                        .HasPrecision(15, 2)
+                        .HasColumnType("decimal(15,2)");
+
+                    b.Property<decimal>("OiDayLow")
+                        .HasPrecision(15, 2)
+                        .HasColumnType("decimal(15,2)");
+
+                    b.Property<decimal>("OpenInterest")
+                        .HasPrecision(15, 2)
+                        .HasColumnType("decimal(15,2)");
+
+                    b.Property<decimal>("OpenPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("OptionType")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<decimal>("PredictedHigh")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PredictedLow")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PriceDeviation")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PriceDeviationPercent")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("PutCallRatio")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("Rho")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<long>("SellQuantity")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("SpotPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Strike")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("StrikeType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("TheoreticalPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Theta")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<TimeSpan>("TickTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime>("TickTimestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TimeValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("TradingSymbol")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("UpperCircuitLimit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Vega")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("VolatilityRank")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("VolatilitySkew")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<long>("Volume")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("VolumeRatio")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessDate");
+
+                    b.HasIndex("ExpiryDate");
+
+                    b.HasIndex("IndexName");
+
+                    b.HasIndex("InstrumentToken");
+
+                    b.HasIndex("IsMarketOpen");
+
+                    b.HasIndex("OptionType");
+
+                    b.HasIndex("Strike");
+
+                    b.HasIndex("StrikeType");
+
+                    b.HasIndex("TickTime");
+
+                    b.HasIndex("TickTimestamp");
+
+                    b.HasIndex("InstrumentToken", "TickTimestamp")
+                        .IsUnique();
+
+                    b.HasIndex("BusinessDate", "IndexName", "StrikeType");
+
+                    b.HasIndex("BusinessDate", "TickTimestamp", "IndexName");
+
+                    b.HasIndex("IndexName", "ExpiryDate", "Strike", "OptionType", "TickTimestamp");
+
+                    b.ToTable("IntradayTickData", (string)null);
                 });
 
             modelBuilder.Entity("KiteMarketDataService.Worker.Models.MarketQuote", b =>
@@ -389,6 +847,9 @@ namespace KiteMarketDataService.Worker.Migrations
                     b.Property<decimal>("AveragePrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("BusinessDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("BuyOrders1")
                         .HasColumnType("int");
@@ -462,10 +923,10 @@ namespace KiteMarketDataService.Worker.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<long>("InstrumentToken")
-                        .HasColumnType("bigint");
+                    b.Property<int?>("InsertionSequence")
+                        .HasColumnType("int");
 
-                    b.Property<long?>("InstrumentToken1")
+                    b.Property<long>("InstrumentToken")
                         .HasColumnType("bigint");
 
                     b.Property<decimal>("LastPrice")
@@ -474,6 +935,9 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.Property<long>("LastQuantity")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("LastTradeTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("LowPrice")
                         .HasPrecision(10, 2)
@@ -564,14 +1028,17 @@ namespace KiteMarketDataService.Worker.Migrations
                     b.Property<long?>("SellQuantity5")
                         .HasColumnType("bigint");
 
+                    b.Property<decimal?>("SettlementPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("Strike")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<TimeSpan>("TradeTime")
+                    b.Property<TimeSpan?>("TradeTime")
                         .HasColumnType("time");
 
-                    b.Property<DateTime>("TradingDate")
+                    b.Property<DateTime?>("TradingDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("TradingSymbol")
@@ -592,8 +1059,6 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("InstrumentToken");
 
-                    b.HasIndex("InstrumentToken1");
-
                     b.HasIndex("OptionType");
 
                     b.HasIndex("QuoteTimestamp");
@@ -606,16 +1071,301 @@ namespace KiteMarketDataService.Worker.Migrations
 
                     b.HasIndex("TradingDate", "TradingSymbol", "QuoteTimestamp");
 
-                    b.ToTable("MarketQuotes");
+                    b.ToTable("MarketQuotes", (string)null);
                 });
 
-            modelBuilder.Entity("KiteMarketDataService.Worker.Models.MarketQuote", b =>
+            modelBuilder.Entity("KiteMarketDataService.Worker.Models.OptionsGreeks", b =>
                 {
-                    b.HasOne("KiteMarketDataService.Worker.Models.Instrument", "Instrument")
-                        .WithMany()
-                        .HasForeignKey("InstrumentToken1");
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
 
-                    b.Navigation("Instrument");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("BreakEvenPoint")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("BusinessDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CalculationTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ConfidenceScore")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Delta")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("DividendYield")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Gamma")
+                        .HasPrecision(10, 8)
+                        .HasColumnType("decimal(10,8)");
+
+                    b.Property<decimal>("HistoricalVolatility")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("ImpliedVolatility")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("IndexName")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<long>("InstrumentToken")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("IntrinsicValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LastPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("LowerCircuitLimit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("MarketSentiment")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("MaximumGain")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("MaximumLoss")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Moneyness")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<decimal>("OpenInterest")
+                        .HasPrecision(15, 2)
+                        .HasColumnType("decimal(15,2)");
+
+                    b.Property<string>("OptionType")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
+                    b.Property<decimal>("PredictedHigh")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PredictedLow")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PriceDeviation")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("PriceDeviationPercent")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<decimal>("PutCallRatio")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.Property<DateTime>("QuoteTimestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Rho")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("RiskFreeRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("SpotPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Strike")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("StrikeType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<decimal>("TheoreticalPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Theta")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("TimeToExpiry")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("TimeValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("TradingSymbol")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("UpperCircuitLimit")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("Vega")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<decimal>("VolatilityRank")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("VolatilitySkew")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<long>("Volume")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("VolumeRatio")
+                        .HasPrecision(10, 4)
+                        .HasColumnType("decimal(10,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BusinessDate");
+
+                    b.HasIndex("CalculationTime");
+
+                    b.HasIndex("ExpiryDate");
+
+                    b.HasIndex("IndexName");
+
+                    b.HasIndex("InstrumentToken");
+
+                    b.HasIndex("OptionType");
+
+                    b.HasIndex("QuoteTimestamp");
+
+                    b.HasIndex("Strike");
+
+                    b.HasIndex("StrikeType");
+
+                    b.HasIndex("BusinessDate", "IndexName");
+
+                    b.HasIndex("QuoteTimestamp", "InstrumentToken");
+
+                    b.HasIndex("IndexName", "ExpiryDate", "Strike", "OptionType");
+
+                    b.ToTable("OptionsGreeks", (string)null);
+                });
+
+            modelBuilder.Entity("KiteMarketDataService.Worker.Models.SpotData", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("Change")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ChangePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("ClosePrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DataSource")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("HighPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("IndexName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsMarketOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("LastPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("LowPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("OpenPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("QuoteTimestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("TradingDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("Volume")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IndexName");
+
+                    b.HasIndex("QuoteTimestamp");
+
+                    b.HasIndex("TradingDate");
+
+                    b.HasIndex("IndexName", "TradingDate");
+
+                    b.ToTable("SpotData", (string)null);
                 });
 #pragma warning restore 612, 618
         }

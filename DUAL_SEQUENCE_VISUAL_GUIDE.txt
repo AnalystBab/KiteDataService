@@ -1,0 +1,185 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   DUAL SEQUENCE NUMBERS - VISUAL GUIDE                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📊 WHAT IS "DUAL SEQUENCE"?
+────────────────────────────
+Two different counters working together:
+  1. InsertionSequence (Daily)
+  2. GlobalSequence (Lifecycle)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         INSERTIONSEQUENCE (DAILY)
+═══════════════════════════════════════════════════════════════════════════════
+
+Resets: ✅ Every new business date
+Scope:  📅 Single day only
+Range:  1-20 per day (typically)
+
+VISUAL:
+┌─────────────┬──────────────────────────────────────┐
+│ Oct 7       │  1 → 2 → 3                          │  ← 3 changes on Oct 7
+├─────────────┼──────────────────────────────────────┤
+│ Oct 8       │  1 → 2                    (RESET!)  │  ← 2 changes on Oct 8
+├─────────────┼──────────────────────────────────────┤
+│ Oct 9       │  1 → 2 → 3 → 4            (RESET!)  │  ← 4 changes on Oct 9
+└─────────────┴──────────────────────────────────────┘
+
+USE CASE: "How many times did LC/UC change TODAY?"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         GLOBALSEQUENCE (LIFECYCLE)
+═══════════════════════════════════════════════════════════════════════════════
+
+Resets: ❌ NEVER (until expiry)
+Scope:  🌍 Entire contract life
+Range:  1-100+ (from start to expiry)
+
+VISUAL:
+┌─────────────┬──────────────────────────────────────┐
+│ Oct 7       │  1 → 2 → 3                          │  ← First 3 records
+├─────────────┼──────────────────────────────────────┤
+│ Oct 8       │         4 → 5         (CONTINUES!)  │  ← Continues to 4, 5
+├─────────────┼──────────────────────────────────────┤
+│ Oct 9       │              6 → 7 → 8 → 9          │  ← Continues to 6,7,8,9
+└─────────────┴──────────────────────────────────────┘
+
+USE CASE: "Show me ALL changes from start to expiry"
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                    SIDE-BY-SIDE COMPARISON (NIFTY 25100 CE)
+═══════════════════════════════════════════════════════════════════════════════
+
+Date       │ InsertionSeq │ GlobalSeq │ LC  │ UC  │ Notes
+───────────┼──────────────┼───────────┼─────┼─────┼─────────────────────
+Oct 7      │      1       │     1     │ 500 │ 700 │ Initial load
+Oct 7      │      2       │     2     │ 480 │ 720 │ Changed
+Oct 7      │      3       │     3     │ 460 │ 740 │ Changed again
+───────────┼──────────────┼───────────┼─────┼─────┼─────────────────────
+Oct 8      │      1  ←──┐ │     4  ←─────────────────┐
+Oct 8      │      2  ←──┼─│     5  ←─────────────────┤ Daily RESETS
+           │         RESET│          CONTINUES!   │ Global CONTINUES
+───────────┼──────────────┼───────────┼─────┼─────┼─────────────────────
+Oct 9      │      1  ←──┐ │     6  ←─────────────────┐
+Oct 9      │      2  ←──┼─│     7  ←─────────────────┤ Daily RESETS
+Oct 9      │      3  ←──┼─│     8  ←─────────────────┤ Global CONTINUES
+Oct 9      │      4  ←──┘ │     9  ←─────────────────┘
+───────────┴──────────────┴───────────┴─────┴─────┴─────────────────────
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              WHY BOTH? (USE CASES)
+═══════════════════════════════════════════════════════════════════════════════
+
+╔════════════════════════════════════════════════════════════════════════╗
+║  DAILY ANALYSIS → Use InsertionSequence                               ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Question: "How many times did LC/UC change today?"
+Answer:   MAX(InsertionSequence) for today = 4
+
+Question: "Show me 3rd change today"
+Answer:   WHERE InsertionSequence = 3 AND BusinessDate = '2025-10-09'
+
+
+╔════════════════════════════════════════════════════════════════════════╗
+║  HISTORICAL ANALYSIS → Use GlobalSequence                             ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+Question: "How many total changes from start to now?"
+Answer:   MAX(GlobalSequence) = 9
+
+Question: "Show me the 5th change ever made to this strike"
+Answer:   WHERE GlobalSequence = 5
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                        QUERIES FOR EACH SEQUENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  📅 DAILY QUERIES (InsertionSequence)                                │
+└──────────────────────────────────────────────────────────────────────┘
+
+-- Get today's changes only
+SELECT * FROM MarketQuotes
+WHERE BusinessDate = '2025-10-07'
+ORDER BY InsertionSequence;
+
+-- Count changes today
+SELECT MAX(InsertionSequence) AS ChangesToday
+FROM MarketQuotes
+WHERE BusinessDate = '2025-10-07'
+  AND TradingSymbol = 'NIFTY25OCT25100CE';
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  🌍 LIFECYCLE QUERIES (GlobalSequence)                               │
+└──────────────────────────────────────────────────────────────────────┘
+
+-- Get complete history (all dates)
+SELECT * FROM MarketQuotes
+WHERE TradingSymbol = 'NIFTY25OCT25100CE'
+ORDER BY GlobalSequence;
+
+-- Count total changes ever
+SELECT MAX(GlobalSequence) AS TotalChanges
+FROM MarketQuotes
+WHERE TradingSymbol = 'NIFTY25OCT25100CE';
+
+-- Get latest record (most recent)
+SELECT TOP 1 * FROM MarketQuotes
+WHERE TradingSymbol = 'NIFTY25OCT25100CE'
+ORDER BY GlobalSequence DESC;
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          DATABASE VERIFICATION ✅
+═══════════════════════════════════════════════════════════════════════════════
+
+TABLE: MarketQuotes
+┌──────────────────────┬──────────────┬─────────────────────────────┐
+│ Column               │ Type         │ Status                      │
+├──────────────────────┼──────────────┼─────────────────────────────┤
+│ InsertionSequence    │ int          │ ✅ EXISTS (Daily tracker)   │
+│ GlobalSequence       │ int          │ ✅ ADDED (Lifecycle tracker)│
+└──────────────────────┴──────────────┴─────────────────────────────┘
+
+TABLE: Instruments
+┌──────────────────────┬──────────────┬─────────────────────────────┐
+│ Column               │ Type         │ Status                      │
+├──────────────────────┼──────────────┼─────────────────────────────┤
+│ LoadDate             │ datetime2    │ ✅ ADDED (Business date)    │
+└──────────────────────┴──────────────┴─────────────────────────────┘
+
+INDEXES:
+  ✅ IX_MarketQuotes_TradingSymbol_ExpiryDate_GlobalSequence
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+"DUAL SEQUENCE" = TWO TRACKING SYSTEMS
+
+1️⃣  InsertionSequence = Daily counter
+    ↳ Resets every business date
+    ↳ For intraday analysis
+    ↳ Range: 1-20 per day
+
+2️⃣  GlobalSequence = Lifecycle counter
+    ↳ Never resets (until expiry)
+    ↳ For historical analysis
+    ↳ Range: 1-100+ total
+
+"COMPLETE ANALYSIS" = Can analyze at BOTH levels:
+  ✅ Daily (micro) - What happened today?
+  ✅ Lifecycle (macro) - What happened from start to expiry?
+
+BOTH are calculated automatically when LC/UC changes! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════
+

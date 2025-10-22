@@ -1,0 +1,9 @@
+﻿ERROR OCCURRED!
+============================================================
+No SENSEX options found for the specified expiry date
+
+FULL ERROR DETAILS:
+
+
+Timestamp: 10/09/2025 23:01:20
+Script: DownloadSENSEXOptionsBulletproof.ps1

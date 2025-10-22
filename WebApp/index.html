@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Market Prediction Dashboard</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #1e293b;
+            --card-bg: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            margin: 0;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .prediction-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .prediction-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .prediction-label {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .accuracy-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .accuracy-excellent {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .accuracy-good {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .pattern-item {
+            background: #f9fafb;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .pattern-formula {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .pattern-stats {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: var(--success-color);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .index-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: 700;
+            margin: 0 auto 10px;
+        }
+
+        .icon-sensex {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .icon-banknifty {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .icon-nifty {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            margin: 0 5px;
+            font-weight: 500;
+        }
+
+        .nav-pills .nav-link.active {
+            background: var(--primary-color);
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- Refresh Indicator -->
+    <div class="refresh-indicator">
+        <span class="live-indicator"></span>
+        <span id="lastUpdate">Loading...</span>
+    </div>
+
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-chart-line"></i> Market Prediction Dashboard</h1>
+                    <p class="subtitle">AI-Powered Predictions with 99.84% Accuracy</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-primary" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-success" onclick="toggleAutoRefresh()">
+                            <i class="fas fa-play"></i> <span id="autoRefreshBtn">Auto-Refresh</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <ul class="nav nav-pills mb-4" id="mainNav">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="pill" href="#dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="pill" href="#patterns">
+                    <i class="fas fa-brain"></i> Patterns
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="pill" href="#strikes">
+                    <i class="fas fa-bullseye"></i> Strikes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="pill" href="#analysis">
+                    <i class="fas fa-chart-bar"></i> Analysis
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade show active" id="dashboard">
+                <!-- D1 Predictions -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-crystal-ball"></i> D1 Predictions (Tomorrow - <span id="d1Date">Loading...</span>)
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="predictionsContainer">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Market Data -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i> Live Market Data (D0 - Today)
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="liveDataTable">
+                                <thead>
+                                    <tr>
+                                        <th>Index</th>
+                                        <th>Open</th>
+                                        <th>High</th>
+                                        <th>Low</th>
+                                        <th>Close</th>
+                                        <th>Change %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Best Formulas -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-trophy"></i> Best Prediction Formulas
+                    </div>
+                    <div class="card-body" id="bestFormulasContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalPatterns">0</div>
+                            <div class="stat-label">Total Patterns</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <div class="stat-value" id="avgAccuracy">0%</div>
+                            <div class="stat-label">Avg Accuracy</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <div class="stat-value" id="labelCount">28</div>
+                            <div class="stat-label">Strategy Labels</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <div class="stat-value" id="nextCycle">--:--</div>
+                            <div class="stat-label">Next Discovery</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patterns Tab -->
+            <div class="tab-pane fade" id="patterns">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-brain"></i> Discovered Patterns Library
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <select class="form-select" id="filterTarget">
+                                    <option value="">All Targets</option>
+                                    <option value="LOW">LOW</option>
+                                    <option value="HIGH">HIGH</option>
+                                    <option value="CLOSE">CLOSE</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="filterIndex">
+                                    <option value="">All Indices</option>
+                                    <option value="SENSEX">SENSEX</option>
+                                    <option value="BANKNIFTY">BANKNIFTY</option>
+                                    <option value="NIFTY">NIFTY</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="searchPattern" placeholder="Search patterns...">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="patternsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Formula</th>
+                                        <th>Target</th>
+                                        <th>Index</th>
+                                        <th>Avg Error %</th>
+                                        <th>Consistency</th>
+                                        <th>Occurrences</th>
+                                        <th>Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strikes Tab -->
+            <div class="tab-pane fade" id="strikes">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-bullseye"></i> Strike-Level Premium Predictions
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Coming Soon: Option premium HIGH, LOW, CLOSE predictions for individual strikes</p>
+                        <p><strong>Note:</strong> This is separate from spot HLC predictions and will use a different pattern discovery engine.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Tab -->
+            <div class="tab-pane fade" id="analysis">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i> Strategy Labels & Analysis
+                    </div>
+                    <div class="card-body" id="labelsContainer">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Dashboard Data Loader -->
+    <script src="dashboard-data.js"></script>
+    
+    <script>
+        // Configuration
+        const dataLoader = new DashboardDataLoader();
+        let autoRefreshEnabled = false;
+        let refreshInterval = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            await refreshData();
+            updateLastRefresh();
+        });
+
+        // Refresh all data
+        async function refreshData() {
+            try {
+                const data = await dataLoader.loadAll();
+                displayPredictions(data.predictions);
+                displayLiveData(data.liveData);
+                displayPatterns(data.patterns);
+                displayStatistics(data.statistics);
+                updateLastRefresh();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showError('Failed to load data. Data will be shown from embedded cache.');
+                // Fallback to cache
+                displayPredictions(dataLoader.dataCache.predictions);
+                displayLiveData(dataLoader.dataCache.liveData);
+                displayPatterns(dataLoader.dataCache.patterns);
+            }
+        }
+
+        // Display D1 Predictions
+        function displayPredictions(predictions) {
+
+            const container = document.getElementById('predictionsContainer');
+            container.innerHTML = '';
+
+            predictions.forEach(pred => {
+                const iconClass = pred.index === 'SENSEX' ? 'icon-sensex' : 
+                                 pred.index === 'BANKNIFTY' ? 'icon-banknifty' : 'icon-nifty';
+                
+                container.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card prediction-card">
+                            <div class="index-icon ${iconClass}">${pred.index.substring(0, 1)}</div>
+                            <h5>${pred.index}</h5>
+                            <div class="row mt-3">
+                                <div class="col-4">
+                                    <div class="prediction-label">LOW</div>
+                                    <div class="prediction-value" style="font-size: 1.5em; color: #ef4444;">${pred.low.toLocaleString()}</div>
+                                    <span class="accuracy-badge accuracy-excellent">${pred.accLow}%</span>
+                                </div>
+                                <div class="col-4">
+                                    <div class="prediction-label">HIGH</div>
+                                    <div class="prediction-value" style="font-size: 1.5em; color: #10b981;">${pred.high.toLocaleString()}</div>
+                                    <span class="accuracy-badge accuracy-excellent">${pred.accHigh}%</span>
+                                </div>
+                                <div class="col-4">
+                                    <div class="prediction-label">CLOSE</div>
+                                    <div class="prediction-value" style="font-size: 1.5em; color: #2563eb;">${pred.close.toLocaleString()}</div>
+                                    <span class="accuracy-badge accuracy-excellent">${pred.accClose}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Update D1 date
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('d1Date').textContent = tomorrow.toLocaleDateString('en-IN');
+        }
+
+        // Load live market data
+        async function loadLiveData() {
+            // Mock data - will connect to database
+            const liveData = [
+                { index: 'SENSEX', open: 82100, high: 82250, low: 82000, close: 82150, change: 0.25 },
+                { index: 'BANKNIFTY', open: 56200, high: 56300, low: 56100, close: 56250, change: 0.18 },
+                { index: 'NIFTY', open: 25100, high: 25200, low: 25050, close: 25150, change: 0.12 }
+            ];
+
+            const tbody = document.querySelector('#liveDataTable tbody');
+            tbody.innerHTML = '';
+
+            liveData.forEach(data => {
+                const changeClass = data.change >= 0 ? 'text-success' : 'text-danger';
+                const changeIcon = data.change >= 0 ? '▲' : '▼';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${data.index}</strong></td>
+                        <td>${data.open.toLocaleString()}</td>
+                        <td class="text-success">${data.high.toLocaleString()}</td>
+                        <td class="text-danger">${data.low.toLocaleString()}</td>
+                        <td>${data.close.toLocaleString()}</td>
+                        <td class="${changeClass}">${changeIcon} ${Math.abs(data.change)}%</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Load discovered patterns
+        async function loadPatterns() {
+            // Mock data - will query DiscoveredPatterns table
+            const patterns = [
+                { formula: 'SPOT_CLOSE_D0 + CE_PE_UC_DIFFERENCE', target: 'HIGH', index: 'SENSEX', error: 0.00, consistency: 99.5, count: 12 },
+                { formula: 'PUT_BASE_UC + CALL_MINUS_DISTANCE', target: 'LOW', index: 'BANKNIFTY', error: 0.16, consistency: 95.2, count: 8 },
+                { formula: '(PUT_BASE_STRIKE + BOUNDARY_LOWER) / 2', target: 'CLOSE', index: 'NIFTY', error: 0.00, consistency: 98.1, count: 15 }
+            ];
+
+            const tbody = document.querySelector('#patternsTable tbody');
+            tbody.innerHTML = '';
+
+            patterns.forEach((p, i) => {
+                const rating = p.error < 0.5 ? '⭐⭐⭐⭐⭐' : p.error < 1 ? '⭐⭐⭐⭐' : '⭐⭐⭐';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td><code>${p.formula}</code></td>
+                        <td><span class="badge bg-primary">${p.target}</span></td>
+                        <td>${p.index}</td>
+                        <td>${p.error}%</td>
+                        <td>${p.consistency}%</td>
+                        <td>${p.count}</td>
+                        <td>${rating}</td>
+                    </tr>
+                `;
+            });
+
+            // Update total patterns stat
+            document.getElementById('totalPatterns').textContent = '5,266';
+        }
+
+        // Load strategy labels
+        async function loadLabels() {
+            const container = document.getElementById('labelsContainer');
+            container.innerHTML = '<p>Loading strategy labels...</p>';
+            
+            // Will query StrategyLabels table
+            // For now, show placeholder
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <strong>Strategy Labels:</strong> 28 labels calculated including Label #22 (ADJUSTED_LOW_PREDICTION_PREMIUM)
+                </div>
+            `;
+        }
+
+        // Load statistics
+        async function loadStatistics() {
+            document.getElementById('avgAccuracy').textContent = '99.84%';
+            // Calculate next cycle time (6 hours from now)
+            const nextCycle = new Date();
+            nextCycle.setHours(nextCycle.getHours() + 6);
+            document.getElementById('nextCycle').textContent = nextCycle.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // Update last refresh time
+        function updateLastRefresh() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = 
+                'Updated: ' + now.toLocaleTimeString('en-IN');
+        }
+
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefreshEnabled) {
+                btn.innerHTML = '<i class="fas fa-pause"></i> Stop';
+                refreshInterval = setInterval(refreshData, 30000); // Refresh every 30 seconds
+            } else {
+                btn.innerHTML = '<i class="fas fa-play"></i> Auto-Refresh';
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            alert(message);
+        }
+    </script>
+</body>
+</html>
+

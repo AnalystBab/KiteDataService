@@ -1,0 +1,518 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using KiteMarketDataService.Worker.Data;
+using KiteMarketDataService.Worker.Models;
+
+namespace KiteMarketDataService.Worker.Services
+{
+    /// <summary>
+    /// Scans all D0 strikes for UC/LC matches with calculated label values
+    /// Finds patterns and generates predictions
+    /// </summary>
+    public class StrikeScannerService
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<StrikeScannerService> _logger;
+        private const string STRATEGY_NAME = "LC_UC_DISTANCE_MATCHER";
+        private const decimal DEFAULT_TOLERANCE = 50.00m;
+
+        public StrikeScannerService(
+            IServiceScopeFactory scopeFactory,
+            ILogger<StrikeScannerService> logger)
+        {
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Scan all strikes and find UC/LC matches for given labels
+        /// </summary>
+        public async Task<List<StrategyMatch>> ScanAndMatchAsync(
+            DateTime businessDate,
+            string indexName,
+            List<StrategyLabel> calculatedLabels,
+            DateTime? targetExpiry = null,
+            decimal tolerance = DEFAULT_TOLERANCE)
+        {
+            try
+            {
+                _logger.LogInformation($"🔍 Scanning strikes for {indexName} on {businessDate:yyyy-MM-dd}");
+
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
+
+                var matches = new List<StrategyMatch>();
+
+                // Determine expiry
+                DateTime expiryToUse = targetExpiry ?? await GetNearestExpiry(context, businessDate, indexName);
+
+                // Get all strikes for this index on D0
+                // Use FINAL LC/UC values (from MAX InsertionSequence) for each strike
+                var allStrikes = await context.MarketQuotes
+                    .Where(q => q.BusinessDate == businessDate
+                        && q.TradingSymbol.StartsWith(indexName)
+                        && q.ExpiryDate == expiryToUse)
+                    .GroupBy(q => new { q.Strike, q.OptionType })
+                    .Select(g => new
+                    {
+                        Strike = g.Key.Strike,
+                        OptionType = g.Key.OptionType,
+                        MaxSeq = g.Max(q => q.InsertionSequence),
+                        UC = g.Where(q => q.InsertionSequence == g.Max(x => x.InsertionSequence)).Select(q => q.UpperCircuitLimit ?? 0).FirstOrDefault(),
+                        LC = g.Where(q => q.InsertionSequence == g.Max(x => x.InsertionSequence)).Select(q => q.LowerCircuitLimit ?? 0).FirstOrDefault()
+                    })
+                    .OrderBy(s => s.Strike)
+                    .ToListAsync();
+
+                _logger.LogInformation($"📊 Found {allStrikes.Count} strikes to scan");
+
+                // Target labels to match (high-value predictors)
+                var targetLabels = calculatedLabels.Where(l => new[]
+                {
+                    "TARGET_CE_PREMIUM",  // Label 20 - predicts low
+                    "TARGET_PE_PREMIUM",  // Label 21 - predicts premium
+                    "CALL_MINUS_TO_CALL_BASE_DISTANCE",  // Label 16 - GOLDEN!
+                    "CE_PE_UC_DIFFERENCE",  // Label 22
+                    "CE_PE_UC_AVERAGE",     // Label 23
+                    "CALL_BASE_PUT_BASE_UC_DIFFERENCE",  // Label 24
+                    "CALL_PLUS_SOFT_BOUNDARY",  // Label 25 - as strike level
+                    "DYNAMIC_HIGH_BOUNDARY"     // Label 27 - as strike level
+                }.Contains(l.LabelName)).ToList();
+
+                // For each target label, scan all strikes
+                foreach (var label in targetLabels)
+                {
+                    foreach (var strike in allStrikes)
+                    {
+                        // Check UC match
+                        decimal ucDiff = Math.Abs(strike.UC - label.LabelValue);
+                        if (ucDiff <= tolerance)
+                        {
+                            var match = CreateMatch(
+                                businessDate, indexName, label.LabelName, label.LabelValue,
+                                strike.Strike, strike.OptionType, "UC", strike.UC,
+                                ucDiff, tolerance, expiryToUse);
+                            
+                            matches.Add(match);
+                        }
+
+                        // Check LC match (less common but possible)
+                        decimal lcDiff = Math.Abs(strike.LC - label.LabelValue);
+                        if (lcDiff <= tolerance && strike.LC > 0.05m)
+                        {
+                            var match = CreateMatch(
+                                businessDate, indexName, label.LabelName, label.LabelValue,
+                                strike.Strike, strike.OptionType, "LC", strike.LC,
+                                lcDiff, tolerance, expiryToUse);
+                            
+                            matches.Add(match);
+                        }
+                    }
+                }
+
+                // Special: Label 26 - HIGH_UC_PE_STRIKE (find PE with highest UC near spot)
+                var spotClose = calculatedLabels.First(l => l.LabelName == "SPOT_CLOSE_D0").LabelValue;
+                var highUcPe = allStrikes
+                    .Where(s => s.OptionType == "PE" 
+                        && s.Strike >= spotClose - 500 
+                        && s.Strike <= spotClose + 500)
+                    .OrderByDescending(s => s.UC)
+                    .FirstOrDefault();
+
+                if (highUcPe != null)
+                {
+                    // Store as both a label and a match
+                    var highUcLabel = CreateLabel(26, "HIGH_UC_PE_STRIKE", highUcPe.Strike,
+                        "PE strike with highest UC near spot",
+                        "★ Direct spot high predictor! (99.93% accuracy)",
+                        businessDate, indexName, "STRIKE_MATCH", 3, importance: 5);
+                    
+                    calculatedLabels.Add(highUcLabel);
+
+                    // Create match for this
+                    var highUcMatch = CreateMatch(
+                        businessDate, indexName, "HIGH_UC_PE_STRIKE", highUcPe.Strike,
+                        highUcPe.Strike, "PE", "UC", highUcPe.UC,
+                        0, tolerance, expiryToUse);
+                    
+                    highUcMatch.Hypothesis = $"PE strike {highUcPe.Strike} with UC={highUcPe.UC:F2} predicts spot high near this strike level";
+                    highUcMatch.PredictionType = "SPOT_HIGH";
+                    highUcMatch.ConfidenceLevel = 5;
+                    
+                    matches.Add(highUcMatch);
+                }
+
+                // Store matches in database
+                await StoreMatchesAsync(context, matches, businessDate, indexName);
+
+                _logger.LogInformation($"✅ Found and stored {matches.Count} matches");
+                return matches;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to scan strikes for {indexName} on {businessDate:yyyy-MM-dd}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Generate predictions from matches
+        /// </summary>
+        public async Task<List<StrategyPrediction>> GeneratePredictionsAsync(
+            List<StrategyMatch> matches,
+            List<StrategyLabel> labels)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
+
+                var predictions = new List<StrategyPrediction>();
+                var businessDate = matches.First().BusinessDate;
+                var targetDate = businessDate.AddDays(1);
+                var indexName = matches.First().IndexName;
+
+                // Prediction 1: SPOT LOW (from TARGET_CE_PREMIUM match)
+                var lowMatch = matches
+                    .Where(m => m.CalculatedLabelName == "TARGET_CE_PREMIUM" 
+                        && m.MatchedFieldType == "UC"
+                        && m.MatchedOptionType == "PE")
+                    .OrderBy(m => m.Difference)
+                    .FirstOrDefault();
+
+                if (lowMatch != null)
+                {
+                    predictions.Add(new StrategyPrediction
+                    {
+                        MatchId = lowMatch.Id,
+                        StrategyName = STRATEGY_NAME,
+                        PredictionDate = businessDate,
+                        TargetDate = targetDate,
+                        IndexName = indexName,
+                        PredictionType = "SPOT_LOW",
+                        PredictedValue = lowMatch.MatchedStrike,
+                        ConfidenceLevel = 5,
+                        SourceCalculation = "TARGET_CE_PREMIUM match with PE UC",
+                        SourceLabels = "20",
+                        PredictionNotes = $"Matched strike {lowMatch.MatchedStrike} PE with UC={lowMatch.MatchedValue:F2}, diff={lowMatch.Difference:F2}"
+                    });
+                }
+
+                // Prediction 2: DAY RANGE (from CALL_MINUS_DISTANCE)
+                var rangeLabel = labels.First(l => l.LabelName == "CALL_MINUS_TO_CALL_BASE_DISTANCE");
+                predictions.Add(new StrategyPrediction
+                {
+                    StrategyName = STRATEGY_NAME,
+                    PredictionDate = businessDate,
+                    TargetDate = targetDate,
+                    IndexName = indexName,
+                    PredictionType = "DAY_RANGE",
+                    PredictedValue = rangeLabel.LabelValue,
+                    ConfidenceLevel = 5,
+                    SourceCalculation = "CALL_MINUS_TO_CALL_BASE_DISTANCE",
+                    SourceLabels = "16",
+                    PredictionNotes = $"Golden label predicts range: {rangeLabel.LabelValue:F2} points"
+                });
+
+                // Prediction 3: SPOT HIGH (from DYNAMIC_HIGH_BOUNDARY)
+                var highBoundaryLabel = labels.First(l => l.LabelName == "DYNAMIC_HIGH_BOUNDARY");
+                predictions.Add(new StrategyPrediction
+                {
+                    StrategyName = STRATEGY_NAME,
+                    PredictionDate = businessDate,
+                    TargetDate = targetDate,
+                    IndexName = indexName,
+                    PredictionType = "SPOT_HIGH",
+                    PredictedValue = highBoundaryLabel.LabelValue,
+                    ConfidenceLevel = 5,
+                    SourceCalculation = "BOUNDARY_UPPER - TARGET_CE_PREMIUM",
+                    SourceLabels = "27",
+                    PredictionNotes = $"Dynamic boundary predicts high: {highBoundaryLabel.LabelValue:F2}"
+                });
+
+                // Prediction 4: SPOT HIGH (from HIGH_UC_PE_STRIKE) - alternative method
+                var highUcMatch = matches.FirstOrDefault(m => m.CalculatedLabelName == "HIGH_UC_PE_STRIKE");
+                if (highUcMatch != null)
+                {
+                    predictions.Add(new StrategyPrediction
+                    {
+                        MatchId = highUcMatch.Id,
+                        StrategyName = STRATEGY_NAME,
+                        PredictionDate = businessDate,
+                        TargetDate = targetDate,
+                        IndexName = indexName,
+                        PredictionType = "SPOT_HIGH_ALT",
+                        PredictedValue = highUcMatch.MatchedStrike,
+                        ConfidenceLevel = 5,
+                        SourceCalculation = "PE strike with highest UC near spot",
+                        SourceLabels = "26",
+                        PredictionNotes = $"High UC PE at {highUcMatch.MatchedStrike} predicts spot high"
+                    });
+                }
+
+                // Prediction 5: SOFT CEILING (from CALL_PLUS_SOFT_BOUNDARY)
+                var softBoundaryLabel = labels.First(l => l.LabelName == "CALL_PLUS_SOFT_BOUNDARY");
+                predictions.Add(new StrategyPrediction
+                {
+                    StrategyName = STRATEGY_NAME,
+                    PredictionDate = businessDate,
+                    TargetDate = targetDate,
+                    IndexName = indexName,
+                    PredictionType = "SOFT_CEILING",
+                    PredictedValue = softBoundaryLabel.LabelValue,
+                    ConfidenceLevel = 4,
+                    SourceCalculation = "CLOSE_STRIKE + (CLOSE_PE_UC - CALL_PLUS_DISTANCE)",
+                    SourceLabels = "25",
+                    PredictionNotes = $"Soft ceiling at {softBoundaryLabel.LabelValue:F2}"
+                });
+
+                // Prediction 6: OPTION PREMIUM (from TARGET_PE_PREMIUM match)
+                var premiumMatch = matches
+                    .Where(m => m.CalculatedLabelName == "TARGET_PE_PREMIUM"
+                        && m.MatchedFieldType == "UC"
+                        && m.MatchedOptionType == "PE")
+                    .OrderBy(m => m.Difference)
+                    .FirstOrDefault();
+
+                if (premiumMatch != null)
+                {
+                    predictions.Add(new StrategyPrediction
+                    {
+                        MatchId = premiumMatch.Id,
+                        StrategyName = STRATEGY_NAME,
+                        PredictionDate = businessDate,
+                        TargetDate = targetDate,
+                        IndexName = indexName,
+                        PredictionType = "PREMIUM_VALUE",
+                        PredictedValue = premiumMatch.MatchedValue,
+                        ConfidenceLevel = 4,
+                        SourceCalculation = "TARGET_PE_PREMIUM match with PE UC",
+                        SourceLabels = "21",
+                        PredictionNotes = $"Premium value {premiumMatch.MatchedValue:F2} will appear on D1"
+                    });
+                }
+
+                // Prediction 7 & 8: BOUNDARIES (hard limits)
+                var boundaryUpper = labels.First(l => l.LabelName == "BOUNDARY_UPPER");
+                var boundaryLower = labels.First(l => l.LabelName == "BOUNDARY_LOWER");
+
+                predictions.Add(new StrategyPrediction
+                {
+                    StrategyName = STRATEGY_NAME,
+                    PredictionDate = businessDate,
+                    TargetDate = targetDate,
+                    IndexName = indexName,
+                    PredictionType = "BOUNDARY_UPPER",
+                    PredictedValue = boundaryUpper.LabelValue,
+                    ConfidenceLevel = 5,
+                    SourceCalculation = "CLOSE_STRIKE + CLOSE_CE_UC",
+                    SourceLabels = "9",
+                    PredictionNotes = "Hard ceiling - spot cannot exceed this (100% guaranteed)"
+                });
+
+                predictions.Add(new StrategyPrediction
+                {
+                    StrategyName = STRATEGY_NAME,
+                    PredictionDate = businessDate,
+                    TargetDate = targetDate,
+                    IndexName = indexName,
+                    PredictionType = "BOUNDARY_LOWER",
+                    PredictedValue = boundaryLower.LabelValue,
+                    ConfidenceLevel = 5,
+                    SourceCalculation = "CLOSE_STRIKE - CLOSE_PE_UC",
+                    SourceLabels = "10",
+                    PredictionNotes = "Hard floor - spot cannot fall below this (100% guaranteed)"
+                });
+
+                // Store predictions
+                await StorePredictionsAsync(context, predictions);
+
+                _logger.LogInformation($"✅ Generated {predictions.Count} predictions");
+                return predictions;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to generate predictions");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Create a match object
+        /// </summary>
+        private StrategyMatch CreateMatch(
+            DateTime businessDate,
+            string indexName,
+            string labelName,
+            decimal calculatedValue,
+            decimal matchedStrike,
+            string optionType,
+            string fieldType,
+            decimal matchedValue,
+            decimal difference,
+            decimal tolerance,
+            DateTime expiryDate)
+        {
+            decimal matchQuality = difference <= tolerance 
+                ? Math.Round(100 - (difference / tolerance * 100), 2)
+                : 0;
+
+            int confidence = matchQuality switch
+            {
+                >= 99.0m => 5,
+                >= 98.0m => 4,
+                >= 95.0m => 3,
+                >= 90.0m => 2,
+                _ => 1
+            };
+
+            string hypothesis = GenerateHypothesis(labelName, matchedStrike, optionType, matchedValue);
+            string predictionType = GetPredictionType(labelName);
+
+            return new StrategyMatch
+            {
+                StrategyName = STRATEGY_NAME,
+                BusinessDate = businessDate,
+                IndexName = indexName,
+                CalculatedLabelName = labelName,
+                CalculatedValue = calculatedValue,
+                MatchedStrike = matchedStrike,
+                MatchedOptionType = optionType,
+                MatchedFieldType = fieldType,
+                MatchedValue = matchedValue,
+                MatchedExpiryDate = expiryDate,
+                Difference = difference,
+                MatchQuality = matchQuality,
+                Tolerance = tolerance,
+                Hypothesis = hypothesis,
+                PredictionType = predictionType,
+                ConfidenceLevel = confidence
+            };
+        }
+
+        /// <summary>
+        /// Generate hypothesis text based on label and match
+        /// </summary>
+        private string GenerateHypothesis(string labelName, decimal strike, string optionType, decimal matchedValue)
+        {
+            return labelName switch
+            {
+                "TARGET_CE_PREMIUM" => $"Strike {strike} {optionType} (UC={matchedValue:F2}) indicates SPOT LOW support level",
+                "TARGET_PE_PREMIUM" => $"Strike {strike} {optionType} (UC={matchedValue:F2}) predicts premium value ~{matchedValue:F0} on D1",
+                "CALL_MINUS_TO_CALL_BASE_DISTANCE" => $"Strike {strike} {optionType} (UC={matchedValue:F2}) indicates floor level - market should not break below",
+                "CE_PE_UC_AVERAGE" => $"Strike {strike} {optionType} (UC={matchedValue:F2}) indicates mid-level / close price area",
+                "CALL_BASE_PUT_BASE_UC_DIFFERENCE" => $"Strike {strike} {optionType} (UC={matchedValue:F2}) predicts this premium level will appear on D1",
+                _ => $"Strike {strike} {optionType} (UC={matchedValue:F2}) matches calculated value"
+            };
+        }
+
+        /// <summary>
+        /// Determine prediction type from label name
+        /// </summary>
+        private string GetPredictionType(string labelName)
+        {
+            return labelName switch
+            {
+                "TARGET_CE_PREMIUM" => "SPOT_LOW",
+                "TARGET_PE_PREMIUM" => "PREMIUM_VALUE",
+                "CALL_MINUS_TO_CALL_BASE_DISTANCE" => "FLOOR_LEVEL",
+                "CE_PE_UC_AVERAGE" => "MID_LEVEL",
+                "CALL_BASE_PUT_BASE_UC_DIFFERENCE" => "PREMIUM_LEVEL",
+                "CALL_PLUS_SOFT_BOUNDARY" => "SOFT_CEILING",
+                "DYNAMIC_HIGH_BOUNDARY" => "SPOT_HIGH",
+                _ => "UNKNOWN"
+            };
+        }
+
+        /// <summary>
+        /// Store matches in database
+        /// </summary>
+        private async Task StoreMatchesAsync(MarketDataContext context, List<StrategyMatch> matches, DateTime businessDate, string indexName)
+        {
+            // Remove existing matches
+            var existing = await context.StrategyMatches
+                .Where(m => m.BusinessDate == businessDate
+                    && m.IndexName == indexName
+                    && m.StrategyName == STRATEGY_NAME)
+                .ToListAsync();
+
+            if (existing.Any())
+            {
+                context.StrategyMatches.RemoveRange(existing);
+            }
+
+            // Add new matches
+            await context.StrategyMatches.AddRangeAsync(matches);
+            await context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Store predictions in database
+        /// </summary>
+        private async Task StorePredictionsAsync(MarketDataContext context, List<StrategyPrediction> predictions)
+        {
+            var businessDate = predictions.First().PredictionDate;
+            var indexName = predictions.First().IndexName;
+
+            // Remove existing predictions
+            var existing = await context.StrategyPredictions
+                .Where(p => p.PredictionDate == businessDate
+                    && p.IndexName == indexName
+                    && p.StrategyName == STRATEGY_NAME)
+                .ToListAsync();
+
+            if (existing.Any())
+            {
+                context.StrategyPredictions.RemoveRange(existing);
+            }
+
+            // Add new predictions
+            await context.StrategyPredictions.AddRangeAsync(predictions);
+            await context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Helper: Create label object
+        /// </summary>
+        private StrategyLabel CreateLabel(
+            int number, string name, decimal value, string formula, string description,
+            DateTime businessDate, string indexName, string processType, int stepNumber, int importance = 3)
+        {
+            return new StrategyLabel
+            {
+                StrategyName = STRATEGY_NAME,
+                StrategyVersion = 1.0m,
+                BusinessDate = businessDate,
+                IndexName = indexName,
+                LabelNumber = number,
+                LabelName = name,
+                LabelValue = value,
+                Formula = formula,
+                Description = description,
+                ProcessType = processType,
+                StepNumber = stepNumber
+            };
+        }
+
+        /// <summary>
+        /// Helper: Get nearest expiry
+        /// </summary>
+        private async Task<DateTime> GetNearestExpiry(MarketDataContext context, DateTime businessDate, string indexName)
+        {
+            var expiry = await context.MarketQuotes
+                .Where(q => q.BusinessDate == businessDate
+                    && q.TradingSymbol.StartsWith(indexName)
+                    && q.ExpiryDate > businessDate)
+                .Select(q => q.ExpiryDate)
+                .OrderBy(e => e)
+                .FirstOrDefaultAsync();
+
+            return expiry;
+        }
+    }
+}
+

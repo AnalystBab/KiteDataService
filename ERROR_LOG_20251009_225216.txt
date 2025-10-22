@@ -1,0 +1,11 @@
+﻿ERROR OCCURRED!
+============================================================
+Error getting instruments: The remote server returned an error: (400) Bad Request.
+
+FULL ERROR DETAILS:
+System.Net.WebException: The remote server returned an error: (400) Bad Request.
+   at Microsoft.PowerShell.Commands.WebRequestPSCmdlet.GetResponse(WebRequest request)
+   at Microsoft.PowerShell.Commands.WebRequestPSCmdlet.ProcessRecord()
+
+Timestamp: 10/09/2025 22:52:16
+Script: DownloadSENSEXOptionsBulletproof.ps1

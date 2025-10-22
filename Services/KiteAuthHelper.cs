@@ -8,16 +8,14 @@ namespace KiteMarketDataService.Worker.Services
     {
         private readonly ILogger<KiteAuthHelper> _logger;
         private readonly string _apiKey;
-        private readonly string _apiSecret;
 
         public KiteAuthHelper(ILogger<KiteAuthHelper> logger)
         {
             _logger = logger;
             _apiKey = "kw3ptb0zmocwupmo";
-            _apiSecret = "q6iqhpb3lx2sw9tomkrljb5fmczdx6mv";
         }
 
-        public async Task<string> GetAccessTokenAsync()
+        public Task<string?> GetAccessTokenAsync()
         {
             try
             {
@@ -38,16 +36,16 @@ namespace KiteMarketDataService.Worker.Services
                 // 3. Extract the request_token from the redirect
                 // 4. Exchange request_token for access_token
                 
-                return null;
+                return Task.FromResult<string?>(null);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get access token");
-                return null;
+                return Task.FromResult<string?>(null);
             }
         }
 
-        public async Task<string> ExchangeRequestTokenForAccessTokenAsync(string requestToken)
+        public Task<string?> ExchangeRequestTokenForAccessTokenAsync(string requestToken)
         {
             try
             {
@@ -56,12 +54,12 @@ namespace KiteMarketDataService.Worker.Services
                 _logger.LogInformation($"Exchanging request token: {requestToken}");
                 
                 // Placeholder - implement actual API call
-                return null;
+                return Task.FromResult<string?>(null);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to exchange request token for access token");
-                return null;
+                return Task.FromResult<string?>(null);
             }
         }
 

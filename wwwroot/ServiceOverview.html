@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Overview - Kite Market Data Service</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar h3 {
+            margin: 0 0 20px 0;
+            padding: 10px 0;
+            border-bottom: 2px solid #3498db;
+            color: #ecf0f1;
+            font-size: 1.2em;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin: 8px 0;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 12px 15px;
+            color: #bdc3c7;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .sidebar a:hover {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar a.active {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+
+        .sidebar .nav-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .header p {
+            font-size: 1.3em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .service-status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #4facfe;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            border-left-color: #00f2fe;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+        }
+
+        .service-card h3 {
+            color: #4facfe;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+        }
+
+        .service-card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .service-card .features {
+            margin-bottom: 20px;
+        }
+
+        .service-card .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .service-card .features li {
+            padding: 5px 0;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .service-card .features li::before {
+            content: '✓';
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .access-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            display: inline-block;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .access-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            color: white;
+            text-decoration: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-running {
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .quick-stats {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .quick-stats h3 {
+            color: #4facfe;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .stat-value {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .footer a:hover {
+            color: #00f2fe;
+        }
+    </style>
+</head>
+    <body>
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <h3>🚀 Navigation</h3>
+            <ul>
+                <li><a href="AdvancedDashboard.html"><span class="nav-icon">🏠</span>Main Dashboard</a></li>
+                <li><a href="ServiceOverview.html" class="active"><span class="nav-icon">📋</span>Service Overview</a></li>
+                <li><a href="SystemMonitor.html" target="_blank"><span class="nav-icon">📊</span>System Monitor</a></li>
+                <li><a href="token-management.html" target="_blank"><span class="nav-icon">🔑</span>Token Management</a></li>
+                <li><a href="SimpleDashboard.html" target="_blank"><span class="nav-icon">📊</span>Simple Dashboard</a></li>
+                <li><a href="PremiumPredictions.html" target="_blank"><span class="nav-icon">🎯</span>Premium Predictions</a></li>
+            </ul>
+            
+            <h3>📋 Quick Actions</h3>
+            <ul>
+                <li><a href="#" onclick="refreshStatus()"><span class="nav-icon">🔄</span>Refresh Status</a></li>
+                <li><a href="#" onclick="checkServiceHealth()"><span class="nav-icon">❤️</span>Health Check</a></li>
+                <li><a href="#" onclick="viewLogs()"><span class="nav-icon">📝</span>View Logs</a></li>
+                <li><a href="#" onclick="exportData()"><span class="nav-icon">📤</span>Export Data</a></li>
+            </ul>
+            
+            <h3>⚙️ Settings</h3>
+            <ul>
+                <li><a href="#" onclick="configureAlerts()"><span class="nav-icon">🔔</span>Alert Settings</a></li>
+                <li><a href="#" onclick="systemSettings()"><span class="nav-icon">⚙️</span>System Settings</a></li>
+                <li><a href="#" onclick="backupData()"><span class="nav-icon">💾</span>Backup Data</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+        <h1>
+            <span>🚀</span>
+            Kite Market Data Service
+            <span>🚀</span>
+        </h1>
+        <p>Comprehensive 24/7 Market Data Collection & Analysis Platform</p>
+        <div class="service-status">
+            <span class="status-indicator status-running"></span>
+            <strong>Service Status: RUNNING</strong> | 
+            <span id="currentTime"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <h3>📊 Quick Overview</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="serviceUptime">24h 15m</div>
+                    <div class="stat-label">Service Uptime</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="dataPoints">45,231</div>
+                    <div class="stat-label">Data Points Collected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeIndices">3</div>
+                    <div class="stat-label">Active Indices</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="lcUcAlerts">2</div>
+                    <div class="stat-label">LC/UC Alerts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Cards -->
+        <div class="services-grid">
+            <!-- System Monitor -->
+            <div class="service-card">
+                <h3><span>📊</span>System Monitor</h3>
+                <p>Real-time monitoring dashboard showing service health, data collection status, and system performance metrics.</p>
+                <div class="features">
+                    <ul>
+                        <li>Live service status monitoring</li>
+                        <li>Real-time data collection tracking</li>
+                        <li>LC/UC alerts and notifications</li>
+                        <li>System performance metrics</li>
+                        <li>Database connection status</li>
+                        <li>API health monitoring</li>
+                    </ul>
+                </div>
+                <a href="/SystemMonitor.html" class="access-btn">Open System Monitor</a>
+            </div>
+
+            <!-- Token Management -->
+            <div class="service-card">
+                <h3><span>🔑</span>Token Management</h3>
+                <p>Manage your Kite Connect authentication tokens and service configuration settings.</p>
+                <div class="features">
+                    <ul>
+                        <li>Request token configuration</li>
+                        <li>Token validation and testing</li>
+                        <li>Service control (start/stop/restart)</li>
+                        <li>Authentication status monitoring</li>
+                        <li>Secure token storage</li>
+                        <li>One-click token updates</li>
+                    </ul>
+                </div>
+                <a href="/token-management.html" class="access-btn">Open Token Management</a>
+            </div>
+
+            <!-- Advanced Dashboard -->
+            <div class="service-card">
+                <h3><span>📈</span>Advanced Dashboard</h3>
+                <p>Comprehensive market data analysis dashboard with charts, patterns, and insights.</p>
+                <div class="features">
+                    <ul>
+                        <li>Interactive market data charts</li>
+                        <li>Pattern recognition analysis</li>
+                        <li>Historical data visualization</li>
+                        <li>Options Greeks calculations</li>
+                        <li>Volatility analysis</li>
+                        <li>Export functionality</li>
+                    </ul>
+                </div>
+                <a href="/AdvancedDashboard.html" class="access-btn">Open Advanced Dashboard</a>
+            </div>
+
+            <!-- Live Market Data -->
+            <div class="service-card">
+                <h3><span>📡</span>Live Market Data</h3>
+                <p>Real-time market data streaming and tick-by-tick data collection for NIFTY, SENSEX, and BANKNIFTY.</p>
+                <div class="features">
+                    <ul>
+                        <li>Real-time tick data streaming</li>
+                        <li>NIFTY, SENSEX, BANKNIFTY tracking</li>
+                        <li>Options chain monitoring</li>
+                        <li>Spot price tracking</li>
+                        <li>Circuit limit monitoring</li>
+                        <li>24/7 data collection</li>
+                    </ul>
+                </div>
+                <a href="/LiveMarket.html" class="access-btn">Open Live Market Data</a>
+            </div>
+
+            <!-- Process Breakdown -->
+            <div class="service-card">
+                <h3><span>🔍</span>Process Breakdown</h3>
+                <p>Detailed analysis of data processing workflows and system performance breakdowns.</p>
+                <div class="features">
+                    <ul>
+                        <li>Data processing workflow analysis</li>
+                        <li>Performance metrics breakdown</li>
+                        <li>Error tracking and diagnostics</li>
+                        <li>Processing time analysis</li>
+                        <li>Resource utilization monitoring</li>
+                        <li>System health reports</li>
+                    </ul>
+                </div>
+                <a href="/ProcessBreakdown.html" class="access-btn">Open Process Breakdown</a>
+            </div>
+
+            <!-- API Documentation -->
+            <div class="service-card">
+                <h3><span>📚</span>API Documentation</h3>
+                <p>Complete API documentation with interactive testing capabilities and endpoint references.</p>
+                <div class="features">
+                    <ul>
+                        <li>Interactive API documentation</li>
+                        <li>Endpoint testing interface</li>
+                        <li>Request/response examples</li>
+                        <li>Authentication guides</li>
+                        <li>Error code references</li>
+                        <li>SDK and integration guides</li>
+                    </ul>
+                </div>
+                <a href="/swagger" class="access-btn">Open API Documentation</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>
+            <strong>Kite Market Data Service</strong> | 
+            Running on <a href="http://localhost:5000">http://localhost:5000</a> | 
+            Built with .NET 9.0 & ASP.NET Core
+        </p>
+        <p style="margin-top: 10px; font-size: 0.9em;">
+            🔄 Auto-refreshing every 30 seconds | 
+            📊 Real-time data collection | 
+            ⚡ High-performance monitoring
+        </p>
+        </div>
+        </div> <!-- End main-content -->
+
+        <script>
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleString();
+        }
+
+        // Update stats periodically
+        function updateStats() {
+            // Simulate real-time stats updates
+            const dataPoints = Math.floor(Math.random() * 1000) + 45000;
+            const lcUcAlerts = Math.floor(Math.random() * 5) + 1;
+            
+            document.getElementById('dataPoints').textContent = dataPoints.toLocaleString();
+            document.getElementById('lcUcAlerts').textContent = lcUcAlerts;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            updateStats();
+            
+            // Update time every second
+            setInterval(updateTime, 1000);
+            
+            // Update stats every 30 seconds
+            setInterval(updateStats, 30000);
+        });
+
+        // Add click tracking for analytics
+        document.querySelectorAll('.access-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const serviceName = this.closest('.service-card').querySelector('h3').textContent.trim();
+                console.log(`Accessing: ${serviceName}`);
+            });
+        });
+
+        // Sidebar navigation functions
+        function refreshStatus() {
+            updateStats();
+            alert('Status refreshed successfully!');
+        }
+
+        function checkServiceHealth() {
+            fetch('/api/SystemMonitor/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'healthy') {
+                        alert('✅ Service health check passed! All systems operational.');
+                    } else {
+                        alert('⚠️ Service health check completed. Check System Monitor for details.');
+                    }
+                })
+                .catch(error => {
+                    alert('❌ Health check failed. Please check System Monitor for details.');
+                });
+        }
+
+        function viewLogs() {
+            window.open('/SystemMonitor.html', '_blank');
+        }
+
+        function exportData() {
+            alert('📤 Data export functionality will be available soon!');
+        }
+
+        function configureAlerts() {
+            alert('🔔 Alert configuration panel will be available soon!');
+        }
+
+        function systemSettings() {
+            alert('⚙️ System settings panel will be available soon!');
+        }
+
+        function backupData() {
+            alert('💾 Data backup functionality will be available soon!');
+        }
+
+        function showHelp() {
+            alert('📖 Help documentation will be available soon!');
+        }
+
+        function showAbout() {
+            alert('ℹ️ Kite Market Data Service v1.0\n\nComprehensive 24/7 Market Data Collection & Analysis Platform\n\nBuilt with .NET 9.0 and modern web technologies.');
+        }
+
+        function contactSupport() {
+            alert('📞 Support contact information will be available soon!');
+        }
+    </script>
+</body>
+</html>

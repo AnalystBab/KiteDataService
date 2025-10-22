@@ -17,7 +17,7 @@ namespace KiteMarketDataService.Worker.Services
             _apiKey = "kw3ptb0zmocwupmo";
         }
 
-        public async Task<string?> ShowTokenInputDialogAsync(string title, string message)
+        public Task<string?> ShowTokenInputDialogAsync(string title, string message)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace KiteMarketDataService.Worker.Services
                     if (!string.IsNullOrEmpty(result))
                     {
                         _logger.LogInformation("Request token received from dialog");
-                        return result;
+                        return Task.FromResult<string?>(result);
                     }
                 }
                 
@@ -87,12 +87,12 @@ namespace KiteMarketDataService.Worker.Services
                 Console.Write("Request Token: ");
                 
                 var consoleToken = Console.ReadLine();
-                return string.IsNullOrWhiteSpace(consoleToken) ? null : consoleToken.Trim();
+                return Task.FromResult<string?>(string.IsNullOrWhiteSpace(consoleToken) ? null : consoleToken.Trim());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to show token input dialog");
-                return null;
+                return Task.FromResult<string?>(null);
             }
         }
         

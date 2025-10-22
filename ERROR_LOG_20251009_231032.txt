@@ -1,0 +1,11 @@
+﻿ERROR OCCURRED!
+============================================================
+Error getting access token: The remote server returned an error: (403) Forbidden.
+
+FULL ERROR DETAILS:
+System.Net.WebException: The remote server returned an error: (403) Forbidden.
+   at Microsoft.PowerShell.Commands.WebRequestPSCmdlet.GetResponse(WebRequest request)
+   at Microsoft.PowerShell.Commands.WebRequestPSCmdlet.ProcessRecord()
+
+Timestamp: 10/09/2025 23:10:32
+Script: DownloadSENSEXOptionsBulletproof.ps1

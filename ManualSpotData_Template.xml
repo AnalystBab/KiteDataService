@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+MANUAL SPOT DATA TEMPLATE
+Update this file with the latest spot data when database spot data is not available
+This ensures accurate business date calculation for LC/UC monitoring
+-->
+<SpotDataConfiguration>
+  <!-- NIFTY SPOT DATA - UPDATE THESE VALUES -->
+  <NIFTY>
+    <IndexName>NIFTY</IndexName>
+    <TradingDate>2025-09-23</TradingDate>                    <!-- UPDATE: Last trading date -->
+    <QuoteTimestamp>2025-09-23 15:30:00</QuoteTimestamp>    <!-- UPDATE: Last trade time -->
+    <OpenPrice>24500.00</OpenPrice>                          <!-- UPDATE: Opening price -->
+    <HighPrice>24650.00</HighPrice>                          <!-- UPDATE: Day's high -->
+    <LowPrice>24400.00</LowPrice>                            <!-- UPDATE: Day's low -->
+    <ClosePrice>24580.00</ClosePrice>                        <!-- UPDATE: Closing price -->
+    <LastPrice>24580.00</LastPrice>                          <!-- UPDATE: Last traded price -->
+    <IsMarketOpen>false</IsMarketOpen>                       <!-- UPDATE: true if market is open -->
+    <BusinessDate>2025-09-23</BusinessDate>                 <!-- UPDATE: Business date -->
+  </NIFTY>
+  
+  <!-- SENSEX SPOT DATA - UPDATE THESE VALUES -->
+  <SENSEX>
+    <IndexName>SENSEX</IndexName>
+    <TradingDate>2025-09-23</TradingDate>                    <!-- UPDATE: Last trading date -->
+    <QuoteTimestamp>2025-09-23 15:30:00</QuoteTimestamp>    <!-- UPDATE: Last trade time -->
+    <OpenPrice>82000.00</OpenPrice>                          <!-- UPDATE: Opening price -->
+    <HighPrice>82500.00</HighPrice>                          <!-- UPDATE: Day's high -->
+    <LowPrice>81800.00</LowPrice>                            <!-- UPDATE: Day's low -->
+    <ClosePrice>82250.00</ClosePrice>                        <!-- UPDATE: Closing price -->
+    <LastPrice>82250.00</LastPrice>                          <!-- UPDATE: Last traded price -->
+    <IsMarketOpen>false</IsMarketOpen>                       <!-- UPDATE: true if market is open -->
+    <BusinessDate>2025-09-23</BusinessDate>                 <!-- UPDATE: Business date -->
+  </SENSEX>
+  
+  <!-- BANKNIFTY SPOT DATA - UPDATE THESE VALUES -->
+  <BANKNIFTY>
+    <IndexName>BANKNIFTY</IndexName>
+    <TradingDate>2025-09-23</TradingDate>                    <!-- UPDATE: Last trading date -->
+    <QuoteTimestamp>2025-09-23 15:30:00</QuoteTimestamp>    <!-- UPDATE: Last trade time -->
+    <OpenPrice>52000.00</OpenPrice>                          <!-- UPDATE: Opening price -->
+    <HighPrice>52500.00</HighPrice>                          <!-- UPDATE: Day's high -->
+    <LowPrice>51800.00</LowPrice>                            <!-- UPDATE: Day's low -->
+    <ClosePrice>52200.00</ClosePrice>                        <!-- UPDATE: Closing price -->
+    <LastPrice>52200.00</LastPrice>                          <!-- UPDATE: Last traded price -->
+    <IsMarketOpen>false</IsMarketOpen>                       <!-- UPDATE: true if market is open -->
+    <BusinessDate>2025-09-23</BusinessDate>                 <!-- UPDATE: Business date -->
+  </BANKNIFTY>
+</SpotDataConfiguration>
