@@ -8,10 +8,75 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar h3 {
+            color: #3498db;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+        }
+
+        .sidebar li {
+            margin: 5px 0;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .sidebar a:hover {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar a.active {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
+        }
+
+        .sidebar .nav-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
         }
         .container {
             max-width: 800px;
@@ -165,9 +230,30 @@
             border-top: 1px solid #dee2e6;
         }
     </style>
-</head>
-<body>
-    <div class="container">
+    </head>
+    <body>
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <h3>🚀 Navigation</h3>
+            <ul>
+                <li><a href="AdvancedDashboard.html"><span class="nav-icon">🏠</span>Dashboard Overview</a></li>
+                <li><a href="AdvancedDashboard.html#predictions"><span class="nav-icon">📈</span>Today's Predictions</a></li>
+                <li><a href="AdvancedDashboard.html#label-analysis"><span class="nav-icon">🏷️</span>Label Analysis</a></li>
+                <li><a href="AdvancedDashboard.html#process-breakdown"><span class="nav-icon">⚙️</span>Process Breakdown</a></li>
+                <li><a href="AdvancedDashboard.html#pattern-insights"><span class="nav-icon">💡</span>Pattern Insights</a></li>
+                <li><a href="AdvancedDashboard.html#live-market"><span class="nav-icon">📡</span>Live Market</a></li>
+                <li><a href="AdvancedDashboard.html#historical-data"><span class="nav-icon">🕒</span>Historical Data</a></li>
+                <li><a href="AdvancedDashboard.html#strike-analysis"><span class="nav-icon">📊</span>Strike Analysis</a></li>
+                <li><a href="PremiumPredictions.html"><span class="nav-icon">🎯</span>Premium HLC Predictions</a></li>
+                <li><a href="ServiceOverview.html"><span class="nav-icon">📋</span>Service Overview</a></li>
+                <li><a href="SystemMonitor.html"><span class="nav-icon">📊</span>System Monitor</a></li>
+                <li><a href="token-management.html" class="active"><span class="nav-icon">🔑</span>Token Management</a></li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container">
         <div class="header">
             <h1>🎯 Kite Token Management</h1>
             <p>Manage your Kite Connect tokens for 24/7 operation</p>
@@ -231,9 +317,10 @@
                 </ol>
             </div>
         </div>
-    </div>
+        </div>
+        </div> <!-- End main-content -->
 
-    <script>
+        <script>
         // Check service status on page load
         window.onload = function() {
             checkServiceStatus();
