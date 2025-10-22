@@ -748,12 +748,39 @@
             </div>
 
             <div class="index-selector">
-                <label for="label-index-select"><i class="fas fa-filter"></i> Select Index:</label>
-                <select id="label-index-select" onchange="updateLabelAnalysis()">
-                    <option value="SENSEX">SENSEX</option>
-                    <option value="BANKNIFTY">BANKNIFTY</option>
-                    <option value="NIFTY">NIFTY</option>
-                </select>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="label-index-select"><i class="fas fa-filter"></i> Select Index:</label>
+                        <select id="label-index-select" class="form-control" onchange="updateLabelAnalysis()">
+                            <option value="SENSEX">SENSEX</option>
+                            <option value="BANKNIFTY">BANKNIFTY</option>
+                            <option value="NIFTY">NIFTY</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="label-expiry-select"><i class="fas fa-calendar"></i> Select Expiry:</label>
+                        <select id="label-expiry-select" class="form-control" onchange="updateLabelAnalysis()">
+                            <option value="2025-10-23">23 Oct 2025</option>
+                            <option value="2025-10-30">30 Oct 2025</option>
+                            <option value="2025-11-06">06 Nov 2025</option>
+                            <option value="2025-11-13">13 Nov 2025</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="label-date-select"><i class="fas fa-calendar-alt"></i> Select D0 Date:</label>
+                        <input type="date" id="label-date-select" class="form-control" onchange="updateLabelAnalysis()" value="2025-10-22">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <button class="btn btn-primary" onclick="updateLabelAnalysis()">
+                            <i class="fas fa-sync-alt"></i> Load Labels
+                        </button>
+                        <button class="btn btn-success ml-2" onclick="loadRealData()">
+                            <i class="fas fa-database"></i> Load Real Data
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="content-card">
@@ -1140,6 +1167,120 @@
         // Update label analysis
         function updateLabelAnalysis() {
             const index = document.getElementById('label-index-select').value;
+            const expiry = document.getElementById('label-expiry-select').value;
+            const date = document.getElementById('label-date-select').value;
+            const labelsGrid = document.getElementById('labels-grid');
+            
+            // Show loading state
+            labelsGrid.innerHTML = '<div class="col-12 text-center"><i class="fas fa-spinner fa-spin"></i> Loading labels...</div>';
+            
+            // Fetch real data from API
+            fetchRealLabelData(index, expiry, date);
+        }
+        
+        // Fetch real label data from API
+        async function fetchRealLabelData(index, expiry, date) {
+            try {
+                const response = await fetch(`/api/StrategyLabels?indexName=${index}&date=${date}`);
+                if (response.ok) {
+                    const labels = await response.json();
+                    displayRealLabels(labels);
+                } else {
+                    // Fallback to demo data if API fails
+                    displayDemoLabels();
+                }
+            } catch (error) {
+                console.error('Error fetching real label data:', error);
+                // Fallback to demo data
+                displayDemoLabels();
+            }
+        }
+        
+        // Display real labels from API
+        function displayRealLabels(labels) {
+            const labelsGrid = document.getElementById('labels-grid');
+            
+            if (!labels || labels.length === 0) {
+                labelsGrid.innerHTML = '<div class="col-12 text-center text-warning"><i class="fas fa-exclamation-triangle"></i> No labels found for selected criteria</div>';
+                return;
+            }
+            
+            labelsGrid.innerHTML = '';
+            
+            // Group labels by category
+            const categories = {};
+            labels.forEach(label => {
+                const category = label.processType || 'UNKNOWN';
+                if (!categories[category]) {
+                    categories[category] = [];
+                }
+                categories[category].push(label);
+            });
+            
+            // Display labels by category
+            Object.keys(categories).forEach(category => {
+                const categoryLabels = categories[category];
+                const categoryName = category.replace('_', ' ').toUpperCase();
+                
+                labelsGrid.innerHTML += `
+                    <div class="col-12 mb-4">
+                        <h5 class="text-primary border-bottom pb-2">📊 ${categoryName} LABELS (${categoryLabels.length})</h5>
+                    </div>
+                `;
+                
+                categoryLabels.forEach(label => {
+                    const importance = getLabelImportance(label.labelName);
+                    const importanceColor = importance >= 5 ? 'text-danger' : importance >= 4 ? 'text-warning' : 'text-info';
+                    const importanceIcon = importance >= 6 ? '⭐' : importance >= 5 ? '🔥' : importance >= 4 ? '⚡' : '📊';
+                    
+                    labelsGrid.innerHTML += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card h-100 border-left-${importance >= 5 ? 'danger' : importance >= 4 ? 'warning' : 'info'}">
+                                <div class="card-body">
+                                    <h6 class="card-title ${importanceColor}">
+                                        ${importanceIcon} ${label.labelName}
+                                    </h6>
+                                    <h4 class="text-primary">${label.labelValue?.toLocaleString() || 'N/A'}</h4>
+                                    <p class="card-text small">${label.description || 'No description available'}</p>
+                                    <span class="badge badge-${importance >= 5 ? 'danger' : importance >= 4 ? 'warning' : 'info'}">
+                                        Importance: ${importance}/6
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+        
+        // Get label importance level
+        function getLabelImportance(labelName) {
+            const importanceMap = {
+                'SPOT_CLOSE_D0': 5,
+                'CLOSE_STRIKE': 5,
+                'CLOSE_CE_UC_D0': 5,
+                'CLOSE_PE_UC_D0': 5,
+                'CALL_BASE_STRIKE': 5,
+                'PUT_BASE_STRIKE': 5,
+                'CALL_MINUS_TO_CALL_BASE_DISTANCE': 6, // GOLDEN predictor
+                'TARGET_CE_PREMIUM': 5,
+                'TARGET_PE_PREMIUM': 5,
+                'CALL_MINUS_VALUE': 5,
+                'PUT_MINUS_VALUE': 5,
+                'CALL_PLUS_VALUE': 5,
+                'PUT_PLUS_VALUE': 4,
+                'BOUNDARY_LOWER': 4,
+                'BOUNDARY_UPPER': 4,
+                'BOUNDARY_RANGE': 3
+            };
+            return importanceMap[labelName] || 3;
+        }
+        
+        // Display demo labels (fallback)
+        function displayDemoLabels() {
+            const index = document.getElementById('label-index-select').value;
+            const expiry = document.getElementById('label-expiry-select').value;
+            const date = document.getElementById('label-date-select').value;
             const labelsGrid = document.getElementById('labels-grid');
             
             // All 27 Strategy Labels with categories
