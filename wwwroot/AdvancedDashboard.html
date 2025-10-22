@@ -1283,46 +1283,50 @@
             const date = document.getElementById('label-date-select').value;
             const labelsGrid = document.getElementById('labels-grid');
             
-            // All 27 Strategy Labels with categories
+            // Strategy Labels in logical calculation order
             const labels = [
-                // CATEGORY 1: BASE DATA LABELS (1-8)
-                { id: 1, name: 'SPOT_CLOSE_D0', value: '82,450', description: 'D0 day closing price - base reference', category: 'BASE_DATA', importance: 5 },
-                { id: 2, name: 'CLOSE_STRIKE', value: '82,450', description: 'Closing strike price (same as spot close)', category: 'BASE_DATA', importance: 5 },
-                { id: 3, name: 'CLOSE_CE_UC_D0', value: '2,850', description: 'Call option Upper Circuit value', category: 'BASE_DATA', importance: 5 },
-                { id: 4, name: 'CLOSE_PE_UC_D0', value: '2,850', description: 'Put option Upper Circuit value', category: 'BASE_DATA', importance: 5 },
-                { id: 5, name: 'CALL_BASE_STRIKE', value: '79,600', description: 'Selected call base strike (D0 close - CE UC)', category: 'BASE_DATA', importance: 5 },
-                { id: 6, name: 'PUT_BASE_STRIKE', value: '85,300', description: 'Selected put base strike (D0 close + PE UC)', category: 'BASE_DATA', importance: 5 },
-                { id: 7, name: 'CALL_BASE_UC', value: '2,850', description: 'Call base strike UC value', category: 'BASE_DATA', importance: 4 },
-                { id: 8, name: 'PUT_BASE_UC', value: '2,850', description: 'Put base strike UC value', category: 'BASE_DATA', importance: 4 },
+                // STEP 1: BASE REFERENCE DATA (Labels 1-3)
+                { id: 1, name: 'SPOT_CLOSE_D0', value: '82,450', description: 'D0 day closing price - base reference', category: 'STEP_1_BASE_REFERENCE', importance: 5 },
+                { id: 2, name: 'CLOSE_STRIKE', value: '82,450', description: 'Closing strike price (same as spot close)', category: 'STEP_1_BASE_REFERENCE', importance: 5 },
+                { id: 3, name: 'CLOSE_CE_UC_D0', value: '2,850', description: 'Call option Upper Circuit value', category: 'STEP_1_BASE_REFERENCE', importance: 5 },
+                { id: 4, name: 'CLOSE_PE_UC_D0', value: '2,850', description: 'Put option Upper Circuit value', category: 'STEP_1_BASE_REFERENCE', importance: 5 },
                 
-                // CATEGORY 2: BOUNDARY LABELS (9-11)
-                { id: 9, name: 'BOUNDARY_LOWER', value: '76,750', description: 'Lower boundary (Call Base - Call Base UC)', category: 'BOUNDARY', importance: 4 },
-                { id: 10, name: 'BOUNDARY_UPPER', value: '88,150', description: 'Upper boundary (Put Base + Put Base UC)', category: 'BOUNDARY', importance: 4 },
-                { id: 11, name: 'BOUNDARY_RANGE', value: '11,400', description: 'Maximum possible range for D1', category: 'BOUNDARY', importance: 3 },
+                // STEP 2: BASE STRIKE CALCULATIONS (Labels 5-6)
+                { id: 5, name: 'CALL_BASE_STRIKE', value: '79,600', description: 'Selected call base strike (D0 close - CE UC)', category: 'STEP_2_BASE_STRIKES', importance: 5 },
+                { id: 6, name: 'PUT_BASE_STRIKE', value: '85,300', description: 'Selected put base strike (D0 close + PE UC)', category: 'STEP_2_BASE_STRIKES', importance: 5 },
                 
-                // CATEGORY 3: QUADRANT LABELS (12-15)
-                { id: 12, name: 'CALL_MINUS_VALUE', value: '79,600', description: 'Call seller\'s maximum profit zone (C-)', category: 'QUADRANT', importance: 5 },
-                { id: 13, name: 'PUT_MINUS_VALUE', value: '79,600', description: 'Put seller\'s danger zone (P-)', category: 'QUADRANT', importance: 5 },
-                { id: 14, name: 'CALL_PLUS_VALUE', value: '85,300', description: 'Call seller\'s danger zone (C+)', category: 'QUADRANT', importance: 5 },
-                { id: 15, name: 'PUT_PLUS_VALUE', value: '85,300', description: 'Put seller\'s maximum profit zone (P+)', category: 'QUADRANT', importance: 4 },
+                // STEP 3: UC/LC VALUES (Labels 7-8)
+                { id: 7, name: 'CALL_BASE_UC', value: '2,850', description: 'Call base strike UC value', category: 'STEP_3_UC_LC_VALUES', importance: 4 },
+                { id: 8, name: 'PUT_BASE_UC', value: '2,850', description: 'Put base strike UC value', category: 'STEP_3_UC_LC_VALUES', importance: 4 },
                 
-                // CATEGORY 4: DISTANCE LABELS (16-19) - KEY PREDICTORS!
-                { id: 16, name: 'CALL_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: '⚡ GOLDEN! Day range predictor (99.65% accuracy)', category: 'DISTANCE', importance: 6 },
-                { id: 17, name: 'PUT_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from call base', category: 'DISTANCE', importance: 3 },
-                { id: 18, name: 'CALL_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Gap between call plus and put base', category: 'DISTANCE', importance: 3 },
-                { id: 19, name: 'PUT_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from put base', category: 'DISTANCE', importance: 3 },
+                // STEP 4: BOUNDARY CALCULATIONS (Labels 9-11)
+                { id: 9, name: 'BOUNDARY_LOWER', value: '76,750', description: 'Lower boundary (Call Base - Call Base UC)', category: 'STEP_4_BOUNDARIES', importance: 4 },
+                { id: 10, name: 'BOUNDARY_UPPER', value: '88,150', description: 'Upper boundary (Put Base + Put Base UC)', category: 'STEP_4_BOUNDARIES', importance: 4 },
+                { id: 11, name: 'BOUNDARY_RANGE', value: '11,400', description: 'Maximum possible range for D1', category: 'STEP_4_BOUNDARIES', importance: 3 },
                 
-                // CATEGORY 5: PLUS DISTANCE LABELS (20-23) - NEW!
-                { id: 20, name: 'CLOSE_CE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + CE UC distance (upside potential)', category: 'PLUS_DISTANCE', importance: 4 },
-                { id: 21, name: 'CLOSE_PE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + PE UC distance (downside potential)', category: 'PLUS_DISTANCE', importance: 4 },
-                { id: 22, name: 'CLOSE_CE_UC_PLUS_DISTANCE_TO_PUT_BASE', value: '2,850', description: 'Distance from Close+CE UC to Put Base', category: 'PLUS_DISTANCE', importance: 3 },
-                { id: 23, name: 'CLOSE_PE_UC_PLUS_DISTANCE_TO_CALL_BASE', value: '2,850', description: 'Distance from Close+PE UC to Call Base', category: 'PLUS_DISTANCE', importance: 3 },
+                // STEP 5: QUADRANT VALUES (Labels 12-15)
+                { id: 12, name: 'CALL_MINUS_VALUE', value: '79,600', description: 'Call seller\'s maximum profit zone (C-)', category: 'STEP_5_QUADRANT_VALUES', importance: 5 },
+                { id: 13, name: 'PUT_MINUS_VALUE', value: '79,600', description: 'Put seller\'s danger zone (P-)', category: 'STEP_5_QUADRANT_VALUES', importance: 5 },
+                { id: 14, name: 'CALL_PLUS_VALUE', value: '85,300', description: 'Call seller\'s danger zone (C+)', category: 'STEP_5_QUADRANT_VALUES', importance: 5 },
+                { id: 15, name: 'PUT_PLUS_VALUE', value: '85,300', description: 'Put seller\'s maximum profit zone (P+)', category: 'STEP_5_QUADRANT_VALUES', importance: 4 },
                 
-                // CATEGORY 6: TARGET PREMIUM LABELS (24-27)
-                { id: 24, name: 'TARGET_CE_PREMIUM', value: '2,850', description: 'Target call option premium (C- process result)', category: 'TARGET_PREMIUM', importance: 5 },
-                { id: 25, name: 'TARGET_PE_PREMIUM', value: '2,850', description: 'Target put option premium (P- process result)', category: 'TARGET_PREMIUM', importance: 5 },
-                { id: 26, name: 'TARGET_CE_PREMIUM_PLUS', value: '2,850', description: 'Target call premium for C+ process', category: 'TARGET_PREMIUM', importance: 4 },
-                { id: 27, name: 'TARGET_PE_PREMIUM_PLUS', value: '2,850', description: 'Target put premium for P+ process', category: 'TARGET_PREMIUM', importance: 4 }
+                // STEP 6: KEY DISTANCE PREDICTORS (Labels 16-19)
+                { id: 16, name: 'CALL_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: '⚡ GOLDEN! Day range predictor (99.65% accuracy)', category: 'STEP_6_KEY_PREDICTORS', importance: 6 },
+                { id: 17, name: 'PUT_MINUS_TO_CALL_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from call base', category: 'STEP_6_KEY_PREDICTORS', importance: 3 },
+                { id: 18, name: 'CALL_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Gap between call plus and put base', category: 'STEP_6_KEY_PREDICTORS', importance: 3 },
+                { id: 19, name: 'PUT_PLUS_TO_PUT_BASE_DISTANCE', value: '0', description: 'Put seller\'s cushion from put base', category: 'STEP_6_KEY_PREDICTORS', importance: 3 },
+                
+                // STEP 7: PLUS DISTANCE CALCULATIONS (Labels 20-23)
+                { id: 20, name: 'CLOSE_CE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + CE UC distance (upside potential)', category: 'STEP_7_PLUS_DISTANCES', importance: 4 },
+                { id: 21, name: 'CLOSE_PE_UC_PLUS_DISTANCE', value: '5,700', description: 'Close + PE UC distance (downside potential)', category: 'STEP_7_PLUS_DISTANCES', importance: 4 },
+                { id: 22, name: 'CLOSE_CE_UC_PLUS_DISTANCE_TO_PUT_BASE', value: '2,850', description: 'Distance from Close+CE UC to Put Base', category: 'STEP_7_PLUS_DISTANCES', importance: 3 },
+                { id: 23, name: 'CLOSE_PE_UC_PLUS_DISTANCE_TO_CALL_BASE', value: '2,850', description: 'Distance from Close+PE UC to Call Base', category: 'STEP_7_PLUS_DISTANCES', importance: 3 },
+                
+                // STEP 8: TARGET PREMIUM CALCULATIONS (Labels 24-27)
+                { id: 24, name: 'TARGET_CE_PREMIUM', value: '2,850', description: 'Target call option premium (C- process result)', category: 'STEP_8_TARGET_PREMIUMS', importance: 5 },
+                { id: 25, name: 'TARGET_PE_PREMIUM', value: '2,850', description: 'Target put option premium (P- process result)', category: 'STEP_8_TARGET_PREMIUMS', importance: 5 },
+                { id: 26, name: 'TARGET_CE_PREMIUM_PLUS', value: '2,850', description: 'Target call premium for C+ process', category: 'STEP_8_TARGET_PREMIUMS', importance: 4 },
+                { id: 27, name: 'TARGET_PE_PREMIUM_PLUS', value: '2,850', description: 'Target put premium for P+ process', category: 'STEP_8_TARGET_PREMIUMS', importance: 4 }
             ];
             
             labelsGrid.innerHTML = '';
@@ -1336,14 +1340,31 @@
                 categories[label.category].push(label);
             });
             
-            // Display labels by category
-            Object.keys(categories).forEach(category => {
+            // Display labels by category in logical order
+            const categoryOrder = [
+                'STEP_1_BASE_REFERENCE',
+                'STEP_2_BASE_STRIKES', 
+                'STEP_3_UC_LC_VALUES',
+                'STEP_4_BOUNDARIES',
+                'STEP_5_QUADRANT_VALUES',
+                'STEP_6_KEY_PREDICTORS',
+                'STEP_7_PLUS_DISTANCES',
+                'STEP_8_TARGET_PREMIUMS'
+            ];
+            
+            categoryOrder.forEach(category => {
+                if (!categories[category]) return;
+                
                 const categoryLabels = categories[category];
-                const categoryName = category.replace('_', ' ').toUpperCase();
+                const stepNumber = category.split('_')[1];
+                const categoryName = category.replace('STEP_' + stepNumber + '_', '').replace('_', ' ').toUpperCase();
                 
                 labelsGrid.innerHTML += `
                     <div class="col-12 mb-4">
-                        <h5 class="text-primary border-bottom pb-2">📊 ${categoryName} LABELS (${categoryLabels.length})</h5>
+                        <h5 class="text-primary border-bottom pb-2">
+                            <span class="badge badge-primary mr-2">STEP ${stepNumber}</span>
+                            📊 ${categoryName} LABELS (${categoryLabels.length})
+                        </h5>
                     </div>
                 `;
                 
