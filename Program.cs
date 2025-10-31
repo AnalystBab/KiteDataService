@@ -27,6 +27,9 @@ namespace KiteMarketDataService.Worker
                         // Add Web API controllers
                         services.AddControllers();
                         
+                        // Add authentication services
+                        services.AddAuthentication();
+                        
                         // Add CORS
                         services.AddCors(options =>
                         {
@@ -54,6 +57,10 @@ namespace KiteMarketDataService.Worker
                         // Enable routing
                         app.UseRouting();
                         
+                        // Add authentication middleware
+                        app.UseAuthentication();
+                        app.UseAuthorization();
+                        
                         // Enable Swagger UI
                         app.UseSwagger();
                         app.UseSwaggerUI(c =>
@@ -80,8 +87,15 @@ namespace KiteMarketDataService.Worker
                 });
                     });
                     
-                    // Listen on port 5000
+                    // Listen on port 5000 with explicit HTTP configuration
                     webBuilder.UseUrls("http://localhost:5000");
+                    webBuilder.UseKestrel(options =>
+                    {
+                        options.ConfigureEndpointDefaults(listenOptions =>
+                        {
+                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+                        });
+                    });
                 })
                 .ConfigureLogging((hostContext, logging) =>
                 {
@@ -89,14 +103,20 @@ namespace KiteMarketDataService.Worker
                     logging.ClearProviders();
                     
                     // Add custom file logging that captures ALL logs
-                    var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "KiteMarketDataService.log");
+                    // Rotate logs per run: create a fresh timestamped log file each service start
+                    var logsRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                    var logFileName = $"KiteMarketDataService_{DateTime.Now:yyyyMMdd_HHmmss}.log";
+                    var logPath = Path.Combine(logsRoot, logFileName);
                     var logDir = Path.GetDirectoryName(logPath);
                     if (!Directory.Exists(logDir))
                         Directory.CreateDirectory(logDir!);
-                    
-                    // Clear the log file on startup
-                    if (File.Exists(logPath))
-                        File.Delete(logPath);
+
+                    // Also write/update a small pointer file so tools/UI can discover the latest log quickly
+                    try
+                    {
+                        File.WriteAllText(Path.Combine(logsRoot, "latest_log_path.txt"), logPath);
+                    }
+                    catch { /* non-fatal */ }
                     
                     // Add custom file logger that captures all log levels
                     logging.AddProvider(new CustomFileLoggerProvider(logPath));
@@ -114,12 +134,27 @@ namespace KiteMarketDataService.Worker
                     services.AddDbContext<CircuitLimitTrackingContext>(options =>
                         options.UseSqlServer(hostContext.Configuration.GetConnectionString("CircuitLimitTrackingConnection")));
 
-                    // Register services as singleton to work with hosted service
-                    services.AddHttpClient<KiteConnectService>();
-                    services.AddHttpClient<KiteAuthService>();
-                    services.AddSingleton<KiteConnectService>();
-                    services.AddSingleton<KiteAuthService>();
-                    services.AddSingleton<BusinessDateCalculationService>();
+                        // Register RELIABLE authentication services
+                        services.AddHttpClient<ReliableAuthService>();
+                        services.AddSingleton<ReliableAuthService>();
+                        
+                        // Register core data collection services
+                        services.AddHttpClient<KiteConnectService>();
+                        services.AddSingleton<KiteConnectService>();
+                        services.AddSingleton<BusinessDateCalculationService>();
+                        services.AddSingleton<MarketDataService>();
+                        
+                        // Register service separation architecture
+                        services.AddHostedService<CoreDataCollectionService>();
+                        // services.AddHostedService<IndependentPatternDiscoveryService>(); // DISABLED - Missing dependencies
+                        // services.AddSingleton<ServiceManager>(); // DISABLED - Missing dependencies
+                        
+                        // Legacy services (for backward compatibility)
+                        services.AddHttpClient<KiteAuthService>();
+                        services.AddHttpClient<RobustKiteAuthService>();
+                        services.AddSingleton<KiteAuthService>();
+                        services.AddSingleton<RobustKiteAuthService>();
+                        services.AddSingleton<DatabaseTokenService>();
                     services.AddSingleton<ManualNiftySpotDataService>();
                     services.AddSingleton<MarketDataService>();
                     services.AddSingleton<SmartCircuitLimitsService>();
@@ -140,21 +175,30 @@ namespace KiteMarketDataService.Worker
         // services.AddSingleton<DailyCloseDataService>(); // TODO: Implement GetHistoricalDataAsync in KiteConnectService
 
                     // Strike Latest Records Service (Track latest 3 records per strike)
-                    services.AddSingleton<StrikeLatestRecordsService>();
+                    // services.AddSingleton<StrikeLatestRecordsService>(); // DISABLED - Database schema errors
 
                     // Strategy System Services (SEPARATE - No impact on data collection!)
-                    services.AddSingleton<StrategyCalculatorService>();
-                    services.AddSingleton<StrategyExcelExportService>();
+                    // ========================================
+                    // STRATEGY SERVICES - COMPLETELY DISABLED
+                    // ========================================
+                    // These services are intentionally disabled to prevent interference 
+                    // with core data collection. Strategy processing should be handled
+                    // by a separate service/application.
+                    // services.AddSingleton<StrategyCalculatorService>(); // DISABLED - Database schema errors
+                    // services.AddSingleton<StrategyExcelExportService>(); // DISABLED - Depends on StrategyCalculatorService
+                    // services.AddSingleton<PatternDiscoveryService>(); // DISABLED - Database schema errors
+                    // services.AddSingleton<LabelBackfillService>(); // DISABLED - Database schema errors
+                    // services.AddHostedService<AdvancedPatternDiscoveryEngine>(); // DISABLED - Database schema errors
+                    
+                    // Core data collection services only
                     services.AddSingleton<PatternEngine>();
-                    services.AddSingleton<PatternDiscoveryService>();
-                    services.AddSingleton<LabelBackfillService>();
                     services.AddSingleton<DynamicLabelCreationService>();
 
                     // Register the worker service
                     services.AddHostedService<Worker>();
                     
                     // Advanced Pattern Discovery Engine (Background Learning)
-                    services.AddHostedService<AdvancedPatternDiscoveryEngine>();
+                    // services.AddHostedService<AdvancedPatternDiscoveryEngine>(); // DISABLED - Database schema errors
                 });
     }
 

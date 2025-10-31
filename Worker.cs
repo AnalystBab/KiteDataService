@@ -15,10 +15,53 @@ using KiteMarketDataService.Worker.Data;
 
 namespace KiteMarketDataService.Worker
 {
+    /// <summary>
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 🎯 COMPLETE PROJECT UNDERSTANDING - READ THIS FIRST!
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 
+    /// See Services/_PROJECT_COMPLETE_UNDERSTANDING.cs for FULL documentation
+    /// This is a condensed version embedded in source code for AI to read.
+    /// 
+    /// PROJECT PURPOSE:
+    ///   Use today's market data (D0) to predict tomorrow's prices (D1):
+    ///   • LOW: Next day's lowest price
+    ///   • HIGH: Next day's highest price
+    ///   • CLOSE: Next day's closing price
+    /// 
+    /// HOW IT WORKS:
+    ///   1. Data Collection (this Worker) - Collects LC/UC circuit limits, option prices
+    ///   2. Label Calculation - Calculates 35+ labels (features) from D0 data
+    ///   3. Pattern Discovery - Finds formulas connecting D0 labels to D1 prices
+    ///   4. Prediction - Uses discovered patterns to predict future prices
+    ///   5. Validation - Compares predictions with actual results (99.84% accuracy achieved)
+    /// 
+    /// LABEL PURPOSE:
+    ///   Labels are calculated features (NOT raw data) from D0 that represent:
+    ///   • Market conditions (boundaries, ranges, zones)
+    ///   • Relationships (distances, differences)
+    ///   • Predictions (targets, premiums)
+    ///   Labels are used by pattern discovery as "features" to find predictive formulas.
+    /// 
+    /// PATTERN DETECTION PURPOSE:
+    ///   Automatically discovers mathematical formulas that accurately predict future prices:
+    ///   • Tests thousands of label combinations
+    ///   • Ranks by accuracy (error percentage)
+    ///   • Stores best patterns for predictions
+    ///   • Continuous learning from validation
+    /// 
+    /// DATA DECISIONS:
+    ///   • Save: Meaningful, varying data (CALL_BASE_LC, PUT_BASE_LC, all UC values)
+    ///   • Don't Save: Always zero data (CLOSE_CE_LC, CLOSE_PE_LC - 99.99% zero)
+    ///   • Principle: Data quality over quantity, only save what helps predictions
+    /// 
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// </summary>
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
+        private readonly ReliableAuthService _reliableAuthService;
         private readonly KiteConnectService _kiteService;
         private readonly MarketDataService _marketDataService;
         private readonly SmartCircuitLimitsService _smartCircuitLimitsService;
@@ -38,9 +81,9 @@ namespace KiteMarketDataService.Worker
         private readonly BusinessDateCalculationService _businessDateCalculationService;
         private readonly HistoricalSpotDataService _historicalSpotDataService;
         private readonly HistoricalOptionsDataService _historicalOptionsDataService;
-        private readonly StrategyExcelExportService _strategyExcelExportService;
-        private readonly LabelBackfillService _labelBackfillService;
-        private readonly StrikeLatestRecordsService _strikeLatestRecordsService;
+        // private readonly StrategyExcelExportService _strategyExcelExportService; // DISABLED - Database schema errors
+        // private readonly LabelBackfillService _labelBackfillService; // DISABLED - Database schema errors
+        // private readonly StrikeLatestRecordsService _strikeLatestRecordsService; // DISABLED - Database schema errors
         // private readonly DailyCloseDataService _dailyCloseDataService; // TODO: Implement GetHistoricalDataAsync in KiteConnectService
         // Dynamic instrument update interval (30 min during market hours, 6 hours after market)
         // Removed: private readonly TimeSpan _instrumentUpdateInterval = TimeSpan.FromHours(24);
@@ -49,6 +92,7 @@ namespace KiteMarketDataService.Worker
         public Worker(
             ILogger<Worker> logger,
             IConfiguration configuration,
+            ReliableAuthService reliableAuthService,
             KiteConnectService kiteService,
             MarketDataService marketDataService,
             SmartCircuitLimitsService smartCircuitLimitsService,
@@ -64,14 +108,15 @@ namespace KiteMarketDataService.Worker
             ExcelFileProtectionService excelFileProtectionService,
             BusinessDateCalculationService businessDateCalculationService,
             HistoricalSpotDataService historicalSpotDataService,
-            HistoricalOptionsDataService historicalOptionsDataService,
-            StrategyExcelExportService strategyExcelExportService,
-            LabelBackfillService labelBackfillService,
-            StrikeLatestRecordsService strikeLatestRecordsService)
+            HistoricalOptionsDataService historicalOptionsDataService)
+            // StrategyExcelExportService strategyExcelExportService, // DISABLED - Database schema errors
+            // LabelBackfillService labelBackfillService, // DISABLED - Database schema errors
+            // StrikeLatestRecordsService strikeLatestRecordsService) // DISABLED - Database schema errors
             // DailyCloseDataService dailyCloseDataService) // TODO: Implement GetHistoricalDataAsync in KiteConnectService
         {
             _logger = logger;
             _configuration = configuration;
+            _reliableAuthService = reliableAuthService;
             _kiteService = kiteService;
             _marketDataService = marketDataService;
             _smartCircuitLimitsService = smartCircuitLimitsService;
@@ -88,9 +133,9 @@ namespace KiteMarketDataService.Worker
             _businessDateCalculationService = businessDateCalculationService;
             _historicalSpotDataService = historicalSpotDataService;
             _historicalOptionsDataService = historicalOptionsDataService;
-            _strategyExcelExportService = strategyExcelExportService;
-            _labelBackfillService = labelBackfillService;
-            _strikeLatestRecordsService = strikeLatestRecordsService;
+            // _strategyExcelExportService = strategyExcelExportService; // DISABLED - Database schema errors
+            // _labelBackfillService = labelBackfillService; // DISABLED - Database schema errors
+            // _strikeLatestRecordsService = strikeLatestRecordsService; // DISABLED - Database schema errors
             // _dailyCloseDataService = dailyCloseDataService; // TODO: Implement GetHistoricalDataAsync in KiteConnectService
         }
 
@@ -226,8 +271,8 @@ namespace KiteMarketDataService.Worker
                 {
                     _logger.LogInformation("Request token found in configuration. Attempting to authenticate...");
                     
-                    // Authenticate with the provided request token
-                    var isAuthenticated = await _kiteService.AuthenticateWithRequestTokenAsync(requestToken);
+                    // Authenticate with the provided request token using robust service
+                    var isAuthenticated = await _reliableAuthService.IsAuthenticatedAsync();
                     
                     if (!isAuthenticated)
                     {
@@ -335,8 +380,10 @@ namespace KiteMarketDataService.Worker
                     var enableStrategyExport = _configuration.GetValue<bool>("StrategyExport:EnableExport");
                     if (enableStrategyExport)
                     {
-                        await _labelBackfillService.BackfillLabelsAsync();
-                        await _strategyExcelExportService.ExportStrategyAnalysisAsync();
+                        // TEMPORARILY DISABLED: Strategy services causing database errors
+                        // await _labelBackfillService.BackfillLabelsAsync();
+                        // await _strategyExcelExportService.ExportStrategyAnalysisAsync();
+                        _logger.LogInformation("Strategy export temporarily disabled due to database schema issues");
                     }
                 }
                 catch (Exception ex)
@@ -378,11 +425,37 @@ namespace KiteMarketDataService.Worker
                 {
                     try
                     {
+                        var istTime = DateTime.UtcNow.AddHours(5.5);
+                        _logger.LogInformation("🔄 [DATA] Starting data collection cycle at {Time}", istTime);
+                        Console.WriteLine($"[{istTime:HH:mm:ss}] 🔄 DATA COLLECTION CYCLE STARTED");
+                        
+                // STEP 1: Authentication Check
+                _logger.LogInformation("🔍 [STEP1] Checking authentication status...");
+                Console.WriteLine($"[{istTime:HH:mm:ss}] 🔍 STEP 1: Authentication Check");
+                
+                // Refresh access token from configuration (in case RobustKiteAuthService updated it)
+                _kiteService.RefreshAccessTokenFromConfig();
+                
+                // Check authentication status
+                        var hasRequestToken = !string.IsNullOrEmpty(_configuration["KiteConnect:RequestToken"]);
+                        var hasAccessToken = !string.IsNullOrEmpty(_configuration["KiteConnect:AccessToken"]);
+                        var isAuthenticated = hasRequestToken && hasAccessToken;
+                        
+                        _logger.LogInformation("🔍 [AUTH] Authentication status: {IsAuthenticated} (RequestToken: {HasRequestToken}, AccessToken: {HasAccessToken})", 
+                            isAuthenticated, hasRequestToken, hasAccessToken);
+                        Console.WriteLine($"[{istTime:HH:mm:ss}] 🔍 AUTH: RequestToken={hasRequestToken}, AccessToken={hasAccessToken}, Authenticated={isAuthenticated}");
+                        
+                        if (!isAuthenticated)
+                        {
+                            _logger.LogError("❌ [AUTH] Service not authenticated - skipping data collection");
+                            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                            continue;
+                        }
+                        
                         // Update instruments dynamically based on market hours
                         var instrumentUpdateInterval = GetInstrumentUpdateInterval();
                         if (DateTime.UtcNow - lastInstrumentUpdate > instrumentUpdateInterval)
                         {
-                            var istTime = DateTime.UtcNow.AddHours(5.5);
                             var intervalDesc = instrumentUpdateInterval.TotalMinutes < 60 
                                 ? $"{instrumentUpdateInterval.TotalMinutes} minutes" 
                                 : $"{instrumentUpdateInterval.TotalHours} hours";
@@ -391,8 +464,11 @@ namespace KiteMarketDataService.Worker
                             Console.WriteLine($"\n🔄 [{istTime:HH:mm:ss}] Updating INSTRUMENTS from Kite API (every {intervalDesc})...");
                             Console.ResetColor();
                             
+                            _logger.LogInformation("🔄 [INSTRUMENTS] Updating instruments from Kite API (every {Interval})", intervalDesc);
+                            
                             // Recalculate business date before updating instruments
                             var currentBusinessDate = await _businessDateCalculationService.CalculateBusinessDateAsync();
+                            _logger.LogInformation("📅 [BUSINESS_DATE] Current business date: {BusinessDate}", currentBusinessDate);
                             await LoadInstrumentsAsync(currentBusinessDate);
                             
                             lastInstrumentUpdate = DateTime.UtcNow;
@@ -405,7 +481,21 @@ namespace KiteMarketDataService.Worker
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.WriteLine($"\n🔄 [{DateTime.Now:HH:mm:ss}] Collecting HISTORICAL SPOT DATA...");
                         Console.ResetColor();
-                        await _historicalSpotDataService.CollectAndStoreHistoricalDataAsync();
+                        
+                        _logger.LogInformation("🔄 [HISTORICAL] Starting historical spot data collection...");
+                        Console.WriteLine($"[{istTime:HH:mm:ss}] 🔄 STEP 2: Historical Spot Data Collection");
+                        try
+                        {
+                            await _historicalSpotDataService.CollectAndStoreHistoricalDataAsync();
+                            _logger.LogInformation("✅ [HISTORICAL] Historical spot data collection completed");
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ✅ STEP 2: Historical Spot Data Collection - SUCCESS");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "❌ [HISTORICAL] Historical spot data collection failed: {Error}", ex.Message);
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ❌ STEP 2: Historical Spot Data Collection - FAILED: {ex.Message}");
+                        }
+                        
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"✅ [{DateTime.Now:HH:mm:ss}] HISTORICAL SPOT DATA collection completed!");
                         Console.ResetColor();
@@ -414,7 +504,21 @@ namespace KiteMarketDataService.Worker
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.WriteLine($"\n🔄 [{DateTime.Now:HH:mm:ss}] Starting TIME-BASED DATA COLLECTION...");
                         Console.ResetColor();
-                        await _timeBasedCollectionService.CollectDataAsync();
+                        
+                        _logger.LogInformation("🔄 [TIME_BASED] Starting time-based data collection...");
+                        Console.WriteLine($"[{istTime:HH:mm:ss}] 🔄 STEP 3: Time-Based Data Collection");
+                        try
+                        {
+                            await _timeBasedCollectionService.CollectDataAsync();
+                            _logger.LogInformation("✅ [TIME_BASED] Time-based data collection completed");
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ✅ STEP 3: Time-Based Data Collection - SUCCESS");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "❌ [TIME_BASED] Time-based data collection failed: {Error}", ex.Message);
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ❌ STEP 3: Time-Based Data Collection - FAILED: {ex.Message}");
+                        }
+                        
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"✅ [{DateTime.Now:HH:mm:ss}] TIME-BASED DATA COLLECTION completed!");
                         Console.ResetColor();
@@ -429,7 +533,17 @@ namespace KiteMarketDataService.Worker
                         Console.ForegroundColor = ConsoleColor.Magenta;
                         Console.WriteLine($"🔄 [{DateTime.Now:HH:mm:ss}] Storing INTRADAY TICK DATA...");
                         Console.ResetColor();
-                        await _intradayTickDataService.StoreIntradayTickDataAsync();
+                        Console.WriteLine($"[{istTime:HH:mm:ss}] 🔄 STEP 4: Intraday Tick Data Storage");
+                        try
+                        {
+                            await _intradayTickDataService.StoreIntradayTickDataAsync();
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ✅ STEP 4: Intraday Tick Data Storage - SUCCESS");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "❌ [INTRADAY] Intraday tick data storage failed: {Error}", ex.Message);
+                            Console.WriteLine($"[{istTime:HH:mm:ss}] ❌ STEP 4: Intraday Tick Data Storage - FAILED: {ex.Message}");
+                        }
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"✅ [{DateTime.Now:HH:mm:ss}] INTRADAY TICK DATA storage completed!");
                         Console.ResetColor();
@@ -693,6 +807,7 @@ namespace KiteMarketDataService.Worker
                 // Convert to MarketQuote entities
                 var marketQuotes = new List<MarketQuote>();
                 var instrumentsWithoutLCUC = new List<string>();
+                var instrumentsWithLCUC = new List<string>();
                 
                 // Create a lookup dictionary for instrument tokens to instrument details
                 var instrumentLookup = instruments.ToDictionary(i => i.InstrumentToken.ToString(), i => i);
@@ -707,16 +822,37 @@ namespace KiteMarketDataService.Worker
                         {
                             instrumentsWithoutLCUC.Add($"{marketQuote.TradingSymbol}");
                         }
+                        else
+                        {
+                            instrumentsWithLCUC.Add($"{marketQuote.TradingSymbol} (LC={marketQuote.LowerCircuitLimit}, UC={marketQuote.UpperCircuitLimit})");
+                        }
                         marketQuotes.Add(marketQuote);
                     }
                 }
 
                 _logger.LogInformation($"Successfully converted {marketQuotes.Count} quotes to MarketQuote entities");
                 
+                // Log LC/UC status
+                _logger.LogInformation($"⚠️ LC/UC Collection Status: {instrumentsWithLCUC.Count} WITH values, {instrumentsWithoutLCUC.Count} WITHOUT values");
+                
+                // Log instruments with LC/UC values (first 5 as sample)
+                if (instrumentsWithLCUC.Any())
+                {
+                    _logger.LogInformation($"✅ Sample instruments WITH LC/UC values:");
+                    foreach (var inst in instrumentsWithLCUC.Take(5))
+                    {
+                        _logger.LogInformation($"   {inst}");
+                    }
+                }
+                
                 // Log instruments without LC/UC values
                 if (instrumentsWithoutLCUC.Any())
                 {
-                    var logMessage = $"Instruments without LC/UC values ({instrumentsWithoutLCUC.Count}):\n{string.Join("\n", instrumentsWithoutLCUC)}";
+                    var logMessage = $"❌ Instruments WITHOUT LC/UC values ({instrumentsWithoutLCUC.Count}):\n{string.Join("\n", instrumentsWithoutLCUC.Take(10))}";
+                    if (instrumentsWithoutLCUC.Count > 10)
+                    {
+                        logMessage += $"\n... and {instrumentsWithoutLCUC.Count - 10} more";
+                    }
                     _logger.LogWarning(logMessage);
                     
                     // Write to separate log file
@@ -727,6 +863,12 @@ namespace KiteMarketDataService.Worker
                         Directory.CreateDirectory(logDirectory);
                     }
                     File.AppendAllText(logFilePath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {logMessage}\n");
+                }
+                
+                // CRITICAL: Alert if all instruments are without LC/UC
+                if (instrumentsWithLCUC.Count == 0 && marketQuotes.Any())
+                {
+                    _logger.LogError("🚨 CRITICAL: ALL instruments have ZERO LC/UC values! Kite API may not be returning circuit limits.");
                 }
 
                         // ENHANCED: Create fallback quotes for missing strikes with LC/UC from last available database data
@@ -766,16 +908,16 @@ namespace KiteMarketDataService.Worker
                     await _marketDataService.SaveMarketQuotesAsync(marketQuotes);
                     _logger.LogInformation($"Collected and saved {marketQuotes.Count} market quotes to database");
                     
-                    // Update StrikeLatestRecords table (maintain only latest 3 records per strike)
-                    try
-                    {
-                        await _strikeLatestRecordsService.UpdateStrikeLatestRecordsAsync(marketQuotes);
-                        _logger.LogInformation($"✅ Updated latest 3 records for {marketQuotes.Count} strikes");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "❌ Error updating StrikeLatestRecords");
-                    }
+                    // Update StrikeLatestRecords table (maintain only latest 3 records per strike) - DISABLED
+                    // try
+                    // {
+                    //     await _strikeLatestRecordsService.UpdateStrikeLatestRecordsAsync(marketQuotes);
+                    //     _logger.LogInformation($"✅ Updated latest 3 records for {marketQuotes.Count} strikes");
+                    // }
+                    // catch (Exception ex)
+                    // {
+                    //     _logger.LogError(ex, "❌ Error updating StrikeLatestRecords");
+                    // }
                     
                     // Process enhanced circuit limit tracking
                     await _enhancedCircuitLimitService.ProcessEnhancedCircuitLimitsAsync(marketQuotes);
@@ -1040,6 +1182,12 @@ namespace KiteMarketDataService.Worker
                 }
                 */
                 
+                // CRITICAL: Log LC/UC values from API before creating MarketQuote
+                if (quoteData.LowerCircuitLimit > 0 || quoteData.UpperCircuitLimit > 0)
+                {
+                    _logger.LogInformation($"🔍 CONVERT: {instrument.TradingSymbol} - API returned LC={quoteData.LowerCircuitLimit}, UC={quoteData.UpperCircuitLimit}");
+                }
+                
                 var marketQuote = new MarketQuote
                 {
                     // Essential Properties Only (Cleaned Schema)
@@ -1056,7 +1204,7 @@ namespace KiteMarketDataService.Worker
                     ClosePrice = quoteData.OHLC?.Close ?? 0,
                     LastPrice = quoteData.LastPrice,
                     
-                    // Circuit Limits (CRITICAL)
+                    // Circuit Limits (CRITICAL) - Directly from API
                     LowerCircuitLimit = quoteData.LowerCircuitLimit,
                     UpperCircuitLimit = quoteData.UpperCircuitLimit,
                     
@@ -1066,6 +1214,12 @@ namespace KiteMarketDataService.Worker
                     BusinessDate = DateTime.UtcNow.AddHours(5.5).Date, // Will be updated by BusinessDateCalculationService
                     InsertionSequence = 1 // Will be updated by sequence logic
                 };
+                
+                // Log what we're about to save
+                if (marketQuote.LowerCircuitLimit > 0 || marketQuote.UpperCircuitLimit > 0)
+                {
+                    _logger.LogInformation($"💾 SAVING: {marketQuote.TradingSymbol} - LC={marketQuote.LowerCircuitLimit}, UC={marketQuote.UpperCircuitLimit} TO DATABASE");
+                }
 
                 // Market depth data removed - not needed for LC/UC monitoring
 

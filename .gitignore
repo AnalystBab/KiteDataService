@@ -67,3 +67,28 @@ DatabaseBackups/
 *.7z
 *.rar
 *.xlsx
+
+# SQL Query Files (temporary debugging files)
+*.sql
+CHECK_*.sql
+SENSEX_*.sql
+EXPORT_*.sql
+EXTRACT_*.sql
+SIMPLE_*.sql
+DEBUG_*.sql
+
+# Service management
+service.pid
+BackgroundServiceManager/logs/
+
+# Bat files
+*.bat
+
+# Documentation (temporary)
+*.md
+
+# Disabled files
+*.disabled
+
+# Context folder
+context/

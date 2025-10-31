@@ -366,16 +366,16 @@ namespace KiteMarketDataService.Worker.Services
 
                 _logger.LogDebug($"🔍 Looking for spot price for {indexName} (from {tradingSymbol})");
 
-                var spotData = await context.SpotData
-                    .Where(s => s.IndexName == indexName && s.TradingDate >= today.AddDays(-1))
+                var spotData = await context.HistoricalSpotData
+                    .Where(s => s.IndexName == indexName && s.TradingDate >= today.AddDays(-5))
                     .OrderByDescending(s => s.TradingDate)
-                    .ThenByDescending(s => s.QuoteTimestamp)
+                    .ThenByDescending(s => s.LastUpdated)
                     .FirstOrDefaultAsync();
 
                 if (spotData != null)
                 {
-                    _logger.LogDebug($"✅ Found spot price for {indexName}: {spotData.LastPrice} (from {spotData.TradingDate:yyyy-MM-dd})");
-                    return spotData.LastPrice;
+                    _logger.LogDebug($"✅ Found spot price for {indexName}: {spotData.ClosePrice} (from {spotData.TradingDate:yyyy-MM-dd})");
+                    return spotData.ClosePrice;
                 }
 
                 _logger.LogWarning($"⚠️ No spot price found for {indexName}");

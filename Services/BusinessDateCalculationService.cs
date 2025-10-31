@@ -80,10 +80,24 @@ namespace KiteMarketDataService.Worker.Services
                     return businessDate;
                 }
                 
-                // FINAL FALLBACK: Use previous trading day (safest assumption when no data available)
-                var fallbackDate = GetPreviousTradingDay(DateTime.Now);
-                _logger.LogWarning($"⚠️ FINAL FALLBACK: No spot data available - using previous trading day: {fallbackDate:yyyy-MM-dd}");
-                return fallbackDate;
+                // FINAL FALLBACK: Use correct business date based on market hours
+                var today = DateTime.UtcNow.AddHours(5.5).Date; // IST date
+                var currentTime = DateTime.UtcNow.AddHours(5.5).TimeOfDay;
+                
+                // Check if market is open (9:15 AM to 3:30 PM IST)
+                var marketOpen = currentTime >= new TimeSpan(9, 15, 0) && currentTime <= new TimeSpan(15, 30, 0);
+                
+                if (marketOpen)
+                {
+                    _logger.LogInformation($"✅ MARKET IS OPEN: Using today's date as business date: {today:yyyy-MM-dd}");
+                    return today;
+                }
+                else
+                {
+                    // After market closes, use TODAY's date for after-hours data collection
+                    _logger.LogInformation($"✅ MARKET CLOSED: Using today's date for after-hours data collection: {today:yyyy-MM-dd}");
+                    return today;
+                }
             }
             catch (Exception ex)
             {

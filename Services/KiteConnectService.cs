@@ -18,6 +18,7 @@ namespace KiteMarketDataService.Worker.Services
         private readonly IConfiguration _configuration;
         private readonly KiteAuthService _authService;
         private readonly FullInstrumentService _fullInstrumentService;
+        private readonly DatabaseTokenService _dbTokenService;
         private string? _accessToken;
 
         public KiteConnectService(
@@ -25,13 +26,15 @@ namespace KiteMarketDataService.Worker.Services
             HttpClient httpClient, 
             IConfiguration configuration,
             KiteAuthService authService,
-            FullInstrumentService fullInstrumentService)
+            FullInstrumentService fullInstrumentService,
+            DatabaseTokenService dbTokenService)
         {
             _logger = logger;
             _httpClient = httpClient;
             _configuration = configuration;
             _authService = authService;
             _fullInstrumentService = fullInstrumentService;
+            _dbTokenService = dbTokenService;
             
             _httpClient.BaseAddress = new Uri("https://api.kite.trade/");
             _httpClient.DefaultRequestHeaders.Add("X-Kite-Version", "3");
@@ -42,6 +45,7 @@ namespace KiteMarketDataService.Worker.Services
             try
             {
                 var requestToken = _configuration["KiteConnect:RequestToken"];
+                // Always get fresh access token from configuration (no caching)
                 var accessToken = _configuration["KiteConnect:AccessToken"];
 
                 // Allow non-interactive auth via environment variable as a quick path
@@ -58,7 +62,7 @@ namespace KiteMarketDataService.Worker.Services
                 if (!string.IsNullOrEmpty(accessToken))
                 {
                     _accessToken = accessToken;
-                    _logger.LogInformation("Using existing access token");
+                    _logger.LogInformation("Using fresh access token from configuration");
                     return true;
                 }
 
@@ -75,6 +79,47 @@ namespace KiteMarketDataService.Worker.Services
             {
                 _logger.LogError(ex, "Failed to authenticate");
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Refresh access token from database (for when RobustKiteAuthService updates it)
+        /// </summary>
+        public async Task RefreshAccessTokenFromDatabaseAsync()
+        {
+            try
+            {
+                // ALWAYS get fresh access token from DATABASE - NO CACHING
+                var accessToken = await _dbTokenService.GetLatestAccessTokenAsync();
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    _accessToken = accessToken;
+                    _logger.LogInformation("✅ Access token refreshed from database (fresh)");
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ No access token found in database");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error refreshing access token from database");
+            }
+        }
+        
+        /// <summary>
+        /// Refresh access token from configuration (DEPRECATED - kept for compatibility)
+        /// </summary>
+        public void RefreshAccessTokenFromConfig()
+        {
+            // DEPRECATED: Use RefreshAccessTokenFromDatabaseAsync instead
+            _logger.LogWarning("⚠️ RefreshAccessTokenFromConfig is deprecated - use RefreshAccessTokenFromDatabaseAsync");
+            // Try to refresh from database synchronously as fallback
+            var accessToken = _configuration["KiteConnect:AccessToken"];
+            if (!string.IsNullOrEmpty(accessToken))
+            {
+                _accessToken = accessToken;
+                _logger.LogInformation("✅ Access token refreshed from configuration (fallback)");
             }
         }
 
@@ -153,6 +198,9 @@ namespace KiteMarketDataService.Worker.Services
             {
                 _logger.LogInformation("=== KITE CONNECT API: GET MARKET QUOTES ===");
                 
+                // ALWAYS refresh access token before API call - NO CACHING
+                await RefreshAccessTokenFromDatabaseAsync();
+                
                 if (string.IsNullOrEmpty(_accessToken))
                 {
                     _logger.LogError("Access token not available. Please authenticate first.");
@@ -219,6 +267,29 @@ namespace KiteMarketDataService.Worker.Services
                         var previewContent = content.Length > 500 ? content.Substring(0, 500) + "..." : content;
                         _logger.LogInformation($"Response preview: {previewContent}");
                         
+                        // CRITICAL: Check if response contains LC/UC data
+                        if (content.Contains("lower_circuit_limit") || content.Contains("upper_circuit_limit"))
+                        {
+                            _logger.LogInformation("✅ API response CONTAINS LC/UC fields");
+                            
+                            // Extract sample LC/UC values from JSON
+                            try
+                            {
+                                var sampleStart = content.IndexOf("\"lower_circuit_limit\":");
+                                if (sampleStart >= 0)
+                                {
+                                    var sampleEnd = Math.Min(sampleStart + 200, content.Length);
+                                    var sampleJson = content.Substring(sampleStart, sampleEnd - sampleStart);
+                                    _logger.LogInformation($"LC/UC sample from API: {sampleJson}");
+                                }
+                            }
+                            catch { }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("⚠️ API response DOES NOT contain LC/UC fields!");
+                        }
+                        
                         var quoteResponse = JsonConvert.DeserializeObject<KiteQuoteResponse>(content);
                         
                         if (quoteResponse?.Data != null)
@@ -247,6 +318,12 @@ namespace KiteMarketDataService.Worker.Services
                             foreach (var quote in quoteResponse.Data)
                             {
                                 allQuotes[quote.Key] = quote.Value;
+                                
+                                // DEBUG: Log LC/UC values from API response
+                                if (quote.Value.LowerCircuitLimit > 0 || quote.Value.UpperCircuitLimit > 0)
+                                {
+                                    _logger.LogInformation($"✓ API returned LC/UC for token {quote.Key}: LC={quote.Value.LowerCircuitLimit}, UC={quote.Value.UpperCircuitLimit}");
+                                }
                             }
                             _logger.LogInformation($"Batch {batchNumber} processed successfully. Total quotes so far: {allQuotes.Count}");
                         }
@@ -743,6 +820,9 @@ namespace KiteMarketDataService.Worker.Services
             {
                 _logger.LogInformation($"Fetching historical data for token {instrumentToken} from {fromDate:yyyy-MM-dd} to {toDate:yyyy-MM-dd}");
 
+                // ALWAYS refresh access token before API call - NO CACHING
+                await RefreshAccessTokenFromDatabaseAsync();
+                
                 if (string.IsNullOrEmpty(_accessToken))
                 {
                     _logger.LogError("Access token not available. Please authenticate first.");

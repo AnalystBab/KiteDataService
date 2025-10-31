@@ -21,7 +21,7 @@ namespace KiteMarketDataService.Worker.Data
         public DbSet<IntradayTickData> IntradayTickData { get; set; }
         public DbSet<ExcelExportData> ExcelExportData { get; set; }
         public DbSet<HistoricalOptionsData> HistoricalOptionsData { get; set; }
-        public DbSet<StrikeLatestRecord> StrikeLatestRecords { get; set; }
+        public DbSet<AuthConfiguration> AuthConfiguration { get; set; }
         
         // Strategy System Tables
         public DbSet<StrategyLabelCatalog> StrategyLabelsCatalog { get; set; }
@@ -366,45 +366,45 @@ namespace KiteMarketDataService.Worker.Data
                 entity.HasIndex(e => new { e.TradingDate, e.IndexName }).HasDatabaseName("IX_HistoricalOptionsData_TradingDate_IndexName");
             });
 
-            // Configure StrikeLatestRecords entity
-            modelBuilder.Entity<StrikeLatestRecord>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).ValueGeneratedOnAdd();
-                
-                entity.Property(e => e.TradingSymbol).IsRequired().HasMaxLength(50);
-                entity.Property(e => e.OptionType).IsRequired().HasMaxLength(10);
-                
-                // Configure decimal precision
-                entity.Property(e => e.Strike).HasPrecision(10, 2);
-                entity.Property(e => e.OpenPrice).HasPrecision(10, 2);
-                entity.Property(e => e.HighPrice).HasPrecision(10, 2);
-                entity.Property(e => e.LowPrice).HasPrecision(10, 2);
-                entity.Property(e => e.ClosePrice).HasPrecision(10, 2);
-                entity.Property(e => e.LastPrice).HasPrecision(10, 2);
-                entity.Property(e => e.LowerCircuitLimit).HasPrecision(10, 2);
-                entity.Property(e => e.UpperCircuitLimit).HasPrecision(10, 2);
-                
-                // Configure datetime columns
-                entity.Property(e => e.ExpiryDate).HasColumnType("date");
-                entity.Property(e => e.BusinessDate).HasColumnType("date");
-                entity.Property(e => e.RecordDateTime).HasColumnType("datetime2");
-                entity.Property(e => e.CreatedAt).HasColumnType("datetime2")
-                    .HasDefaultValueSql("GETUTCDATE()");
-                
-                // Create unique constraint to ensure only 3 records per strike
-                entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate, e.RecordOrder })
-                    .IsUnique()
-                    .HasDatabaseName("UK_StrikeLatestRecords_Strike_Type_Expiry_Order");
-                
-                // Create indexes for performance
-                entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate })
-                    .HasDatabaseName("IX_StrikeLatestRecords_Strike_Type_Expiry");
-                entity.HasIndex(e => e.BusinessDate).HasDatabaseName("IX_StrikeLatestRecords_BusinessDate");
-                entity.HasIndex(e => e.RecordDateTime).HasDatabaseName("IX_StrikeLatestRecords_RecordDateTime");
-                entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate, e.RecordOrder })
-                    .HasDatabaseName("IX_StrikeLatestRecords_RecordOrder");
-            });
+            // Configure StrikeLatestRecords entity - DISABLED
+            // modelBuilder.Entity<StrikeLatestRecord>(entity =>
+            // {
+            //     entity.HasKey(e => e.Id);
+            //     entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            //     
+            //     entity.Property(e => e.TradingSymbol).IsRequired().HasMaxLength(50);
+            //     entity.Property(e => e.OptionType).IsRequired().HasMaxLength(10);
+            //     
+            //     // Configure decimal precision
+            //     entity.Property(e => e.Strike).HasPrecision(10, 2);
+            //     entity.Property(e => e.OpenPrice).HasPrecision(10, 2);
+            //     entity.Property(e => e.HighPrice).HasPrecision(10, 2);
+            //     entity.Property(e => e.LowPrice).HasPrecision(10, 2);
+            //     entity.Property(e => e.ClosePrice).HasPrecision(10, 2);
+            //     entity.Property(e => e.LastPrice).HasPrecision(10, 2);
+            //     entity.Property(e => e.LowerCircuitLimit).HasPrecision(10, 2);
+            //     entity.Property(e => e.UpperCircuitLimit).HasPrecision(10, 2);
+            //     
+            //     // Configure datetime columns
+            //     entity.Property(e => e.ExpiryDate).HasColumnType("date");
+            //     entity.Property(e => e.BusinessDate).HasColumnType("date");
+            //     entity.Property(e => e.RecordDateTime).HasColumnType("datetime2");
+            //     entity.Property(e => e.CreatedAt).HasColumnType("datetime2")
+            //         .HasDefaultValueSql("GETUTCDATE()");
+            //     
+            //     // Create unique constraint to ensure only 3 records per strike
+            //     entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate, e.RecordOrder })
+            //         .IsUnique()
+            //         .HasDatabaseName("UK_StrikeLatestRecords_Strike_Type_Expiry_Order");
+            //     
+            //     // Create indexes for performance
+            //     entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate })
+            //         .HasDatabaseName("IX_StrikeLatestRecords_Strike_Type_Expiry");
+            //     entity.HasIndex(e => e.BusinessDate).HasDatabaseName("IX_StrikeLatestRecords_BusinessDate");
+            //     entity.HasIndex(e => e.RecordDateTime).HasDatabaseName("IX_StrikeLatestRecords_RecordDateTime");
+            //     entity.HasIndex(e => new { e.TradingSymbol, e.Strike, e.OptionType, e.ExpiryDate, e.RecordOrder })
+            //         .HasDatabaseName("IX_StrikeLatestRecords_RecordOrder");
+            // });
 
             // Configure Strategy System Entities
             
@@ -476,6 +476,28 @@ namespace KiteMarketDataService.Worker.Data
                 
                 entity.HasIndex(e => new { e.StrategyName, e.StrategyVersion });
                 entity.HasIndex(e => e.AverageAccuracy);
+            });
+
+            // Configure AuthConfiguration entity
+            modelBuilder.Entity<AuthConfiguration>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                
+                entity.Property(e => e.ApiKey).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.ApiSecret).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.RequestToken).HasMaxLength(200);
+                entity.Property(e => e.AccessToken).HasMaxLength(200);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                
+                entity.Property(e => e.IsActive).IsRequired();
+                entity.Property(e => e.CreatedAt).IsRequired();
+                entity.Property(e => e.UpdatedAt).IsRequired();
+                
+                // Create indexes for performance
+                entity.HasIndex(e => e.IsActive);
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.UpdatedAt);
             });
         }
     }
