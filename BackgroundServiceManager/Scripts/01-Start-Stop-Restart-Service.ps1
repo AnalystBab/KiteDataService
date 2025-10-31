@@ -283,3 +283,35 @@ if ($Stop) {
 }
 
 Write-Host ""
+
+        Write-Host "✅ Service started successfully in background!" -ForegroundColor Green
+        Write-Host "   PID: $($result.PID)" -ForegroundColor White
+        Write-Host "   Web Interface: http://localhost:5000" -ForegroundColor Cyan
+        Write-Host "   Log File: $LogFile" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "To check status: .\RunServiceInBackground.ps1 -Status" -ForegroundColor Yellow
+        Write-Host "To monitor: .\RunServiceInBackground.ps1 -Monitor" -ForegroundColor Yellow
+        Write-Host "To stop: .\RunServiceInBackground.ps1 -Stop" -ForegroundColor Yellow
+    } else {
+        Write-Host "❌ Failed to start service!" -ForegroundColor Red
+        Write-Host "Check the log file for details: $LogFile" -ForegroundColor Yellow
+    }
+}
+
+Write-Host ""
+
+        Write-Host "✅ Service started successfully in background!" -ForegroundColor Green
+        Write-Host "   PID: $($result.PID)" -ForegroundColor White
+        Write-Host "   Web Interface: http://localhost:5000" -ForegroundColor Cyan
+        Write-Host "   Log File: $LogFile" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "To check status: .\RunServiceInBackground.ps1 -Status" -ForegroundColor Yellow
+        Write-Host "To monitor: .\RunServiceInBackground.ps1 -Monitor" -ForegroundColor Yellow
+        Write-Host "To stop: .\RunServiceInBackground.ps1 -Stop" -ForegroundColor Yellow
+    } else {
+        Write-Host "❌ Failed to start service!" -ForegroundColor Red
+        Write-Host "Check the log file for details: $LogFile" -ForegroundColor Yellow
+    }
+}
+
+Write-Host ""

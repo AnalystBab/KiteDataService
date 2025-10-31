@@ -937,3 +937,163 @@ namespace KiteMarketDataService.Worker.Services
         public List<List<object>>? Candles { get; set; }
     }
 } 
+                    var historicalResponse = System.Text.Json.JsonSerializer.Deserialize<HistoricalDataResponse>(jsonContent, options);
+                    
+                    _logger.LogInformation($"Deserialized response - Status: {historicalResponse?.Status}, Has Data: {historicalResponse?.Data != null}, Has Candles: {historicalResponse?.Data?.Candles != null}");
+                    
+                    if (historicalResponse?.Data?.Candles != null && historicalResponse.Data.Candles.Any())
+                    {
+                        var historicalData = new List<HistoricalCandleData>();
+                        
+                        _logger.LogInformation($"Processing {historicalResponse.Data.Candles.Count} candles from API response");
+                        
+                        foreach (var candle in historicalResponse.Data.Candles)
+                        {
+                            try
+                            {
+                                if (candle != null && candle.Count >= 5)
+                                {
+                                    // Handle JsonElement type conversion
+                                    var jsonElement = (System.Text.Json.JsonElement)candle[0];
+                                    var dateStr = jsonElement.GetString();
+                                    
+                                    var candleData = new HistoricalCandleData
+                                    {
+                                        Date = DateTime.Parse(dateStr!),
+                                        Open = ((System.Text.Json.JsonElement)candle[1]).GetDecimal(),
+                                        High = ((System.Text.Json.JsonElement)candle[2]).GetDecimal(),
+                                        Low = ((System.Text.Json.JsonElement)candle[3]).GetDecimal(),
+                                        Close = ((System.Text.Json.JsonElement)candle[4]).GetDecimal(),
+                                        Volume = candle.Count > 5 ? ((System.Text.Json.JsonElement)candle[5]).GetInt64() : 0
+                                    };
+                                    
+                                    historicalData.Add(candleData);
+                                    _logger.LogDebug($"Parsed candle: {candleData.Date:yyyy-MM-dd} O={candleData.Open} H={candleData.High} L={candleData.Low} C={candleData.Close}");
+                                }
+                            }
+                            catch (Exception parseEx)
+                            {
+                                _logger.LogWarning($"Failed to parse candle: {parseEx.Message}");
+                            }
+                        }
+
+                        _logger.LogInformation($"✅ Successfully fetched {historicalData.Count} historical records for token {instrumentToken}");
+                        return historicalData;
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"No historical data found for token {instrumentToken}");
+                        return new List<HistoricalCandleData>();
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError($"Historical API request failed: {response.StatusCode} - {errorContent}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching historical data for token {instrumentToken}");
+                return null;
+            }
+        }
+    }
+
+    // Historical data response models
+    public class HistoricalDataResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string? Status { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public HistoricalApiData? Data { get; set; }
+    }
+
+    public class HistoricalApiData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("candles")]
+        public List<List<object>>? Candles { get; set; }
+    }
+} 
+                    var historicalResponse = System.Text.Json.JsonSerializer.Deserialize<HistoricalDataResponse>(jsonContent, options);
+                    
+                    _logger.LogInformation($"Deserialized response - Status: {historicalResponse?.Status}, Has Data: {historicalResponse?.Data != null}, Has Candles: {historicalResponse?.Data?.Candles != null}");
+                    
+                    if (historicalResponse?.Data?.Candles != null && historicalResponse.Data.Candles.Any())
+                    {
+                        var historicalData = new List<HistoricalCandleData>();
+                        
+                        _logger.LogInformation($"Processing {historicalResponse.Data.Candles.Count} candles from API response");
+                        
+                        foreach (var candle in historicalResponse.Data.Candles)
+                        {
+                            try
+                            {
+                                if (candle != null && candle.Count >= 5)
+                                {
+                                    // Handle JsonElement type conversion
+                                    var jsonElement = (System.Text.Json.JsonElement)candle[0];
+                                    var dateStr = jsonElement.GetString();
+                                    
+                                    var candleData = new HistoricalCandleData
+                                    {
+                                        Date = DateTime.Parse(dateStr!),
+                                        Open = ((System.Text.Json.JsonElement)candle[1]).GetDecimal(),
+                                        High = ((System.Text.Json.JsonElement)candle[2]).GetDecimal(),
+                                        Low = ((System.Text.Json.JsonElement)candle[3]).GetDecimal(),
+                                        Close = ((System.Text.Json.JsonElement)candle[4]).GetDecimal(),
+                                        Volume = candle.Count > 5 ? ((System.Text.Json.JsonElement)candle[5]).GetInt64() : 0
+                                    };
+                                    
+                                    historicalData.Add(candleData);
+                                    _logger.LogDebug($"Parsed candle: {candleData.Date:yyyy-MM-dd} O={candleData.Open} H={candleData.High} L={candleData.Low} C={candleData.Close}");
+                                }
+                            }
+                            catch (Exception parseEx)
+                            {
+                                _logger.LogWarning($"Failed to parse candle: {parseEx.Message}");
+                            }
+                        }
+
+                        _logger.LogInformation($"✅ Successfully fetched {historicalData.Count} historical records for token {instrumentToken}");
+                        return historicalData;
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"No historical data found for token {instrumentToken}");
+                        return new List<HistoricalCandleData>();
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError($"Historical API request failed: {response.StatusCode} - {errorContent}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching historical data for token {instrumentToken}");
+                return null;
+            }
+        }
+    }
+
+    // Historical data response models
+    public class HistoricalDataResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string? Status { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public HistoricalApiData? Data { get; set; }
+    }
+
+    public class HistoricalApiData
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("candles")]
+        public List<List<object>>? Candles { get; set; }
+    }
+} 

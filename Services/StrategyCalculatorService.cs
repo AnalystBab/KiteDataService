@@ -10,8 +10,74 @@ using KiteMarketDataService.Worker.Models;
 namespace KiteMarketDataService.Worker.Services
 {
     /// <summary>
-    /// Calculates all 27 strategy labels for a given business date and index
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// LABEL CALCULATION SERVICE - COMPLETE UNDERSTANDING
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 
+    /// Calculates all 35+ strategy labels for a given business date and index
     /// Implements LC_UC_DISTANCE_MATCHER strategy
+    /// 
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// WHAT ARE LABELS? (CRITICAL UNDERSTANDING)
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 
+    /// Labels are NOT raw data - they are MEANINGFUL CALCULATIONS from D0 market data
+    /// that represent market conditions, relationships, and predictions.
+    /// 
+    /// LABEL PURPOSE:
+    ///   • Pattern Discovery Input: Labels are "features" used by pattern discovery engine
+    ///   • Meaningful Calculations: Each label represents a specific market concept
+    ///   • Consistent Format: Standardized values across dates and indices
+    ///   • Prediction Building Blocks: Combined to find formulas predicting D1 prices
+    /// 
+    /// LABEL CATEGORIES (35+ Labels):
+    ///   • BASE_DATA (1-8): Raw market data (SPOT_CLOSE, CLOSE_STRIKE, UC/LC values)
+    ///   • BOUNDARY (9-11): Price boundaries (UPPER, LOWER, RANGE)
+    ///   • QUADRANT (12-15): Seller/buyer zones (C-, P-, C+, P+)
+    ///   • DISTANCE (16-19): Distances between key points (GOLDEN PREDICTORS!)
+    ///   • TARGET (20-35): Predictions (TARGET_CE_PREMIUM, ADJUSTED_LOW_PREDICTION, etc.)
+    /// 
+    /// LABEL CALCULATION RULES:
+    ///   • Pure Label Combinations: New labels use ONLY existing labels + basic arithmetic (+, -, ABS())
+    ///   • No Hard-Coded Values: Labels must derive from market data
+    ///   • Meaningful Operations: Every operation must have logical reasoning
+    ///   • Validated Patterns: Labels showing predictive power are promoted
+    /// 
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// DATA STORAGE DECISIONS (CRITICAL)
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 
+    /// ✅ SAVE WHEN:
+    ///   • Value is meaningful (> 0.05 for LC, always for UC)
+    ///   • Value varies daily (not constant 99%+ of time)
+    ///   • Has predictive value (used in calculations or patterns)
+    /// 
+    /// ❌ DON'T SAVE WHEN:
+    ///   • Value is always zero (99.99% of time) - Example: CLOSE_CE_LC_D0, CLOSE_PE_LC_D0
+    ///   • No predictive value (cannot help predictions)
+    ///   • Wastes storage (adds noise, not signal)
+    /// 
+    /// CURRENT LC LABELS:
+    ///   • ✅ CALL_BASE_LC_D0: SAVED (meaningful, > 0.05, varies daily)
+    ///   • ✅ PUT_BASE_LC_D0: SAVED (meaningful, > 0.05, varies daily)
+    ///   • ❌ CLOSE_CE_LC_D0: NOT SAVED (99.99% always zero - ATM rarely hits LC)
+    ///   • ❌ CLOSE_PE_LC_D0: NOT SAVED (99.99% always zero - same reason)
+    /// 
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// FULL DOCUMENTATION:
+    /// ═══════════════════════════════════════════════════════════════════════════════
+    /// 
+    /// See Services/_PROJECT_COMPLETE_UNDERSTANDING.cs for complete documentation including:
+    ///   • Project Purpose (predict Low/High/Close using D0 to predict D1)
+    ///   • Label Purpose (features for pattern discovery)
+    ///   • Pattern Detection Purpose (find predictive formulas)
+    ///   • Design Principles (data quality over quantity, pure combinations)
+    ///   • Key Decisions (why LC/UC, why base strikes, why distances)
+    /// 
+    /// See Services/LC_LABELS_ANALYSIS_AND_DECISIONS.md for detailed LC label storage decisions
+    /// See Services/PROJECT_PURPOSE_AND_DESIGN.md for complete markdown documentation
+    /// 
+    /// ═══════════════════════════════════════════════════════════════════════════════
     /// </summary>
     public class StrategyCalculatorService
     {

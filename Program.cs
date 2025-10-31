@@ -334,3 +334,59 @@ namespace KiteMarketDataService.Worker
         }
     }
 }
+
+            {
+                case LogLevel.Error:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case LogLevel.Warning:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case LogLevel.Information:
+                    Console.ForegroundColor = ConsoleColor.White;
+                    break;
+                default:
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    break;
+            }
+
+            Console.WriteLine($"[{logLevel}] {message}");
+            Console.ResetColor();
+            
+            if (exception != null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(exception);
+                Console.ResetColor();
+            }
+        }
+    }
+}
+
+            {
+                case LogLevel.Error:
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case LogLevel.Warning:
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case LogLevel.Information:
+                    Console.ForegroundColor = ConsoleColor.White;
+                    break;
+                default:
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    break;
+            }
+
+            Console.WriteLine($"[{logLevel}] {message}");
+            Console.ResetColor();
+            
+            if (exception != null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(exception);
+                Console.ResetColor();
+            }
+        }
+    }
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor - Diagnostic</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .diagnostic-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .diagnostic-section h3 {
+            margin: 0 0 10px 0;
+            color: #4facfe;
+        }
+        .status-good {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .refresh-btn {
+            background: #4facfe;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px;
+        }
+        .refresh-btn:hover {
+            background: #3d8bfe;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 System Monitor - Diagnostic</h1>
+            <p>Real-time diagnostic information for Kite Market Data Service</p>
+            <button class="refresh-btn" onclick="runDiagnostics()">🔄 Run Diagnostics</button>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>📊 Service Status</h3>
+            <div id="serviceStatus">
+                <div class="status-warning">Loading...</div>
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>🔑 Token Status</h3>
+            <div id="tokenStatus">
+                <div class="status-warning">Loading...</div>
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>📈 Raw LC/UC Data</h3>
+            <div id="rawData" class="data-display">
+                Loading raw data...
+            </div>
+        </div>
+
+        <div class="diagnostic-section">
+            <h3>⚠️ Data Issues Analysis</h3>
+            <div id="dataAnalysis">
+                <div class="status-warning">Loading analysis...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function runDiagnostics() {
+            console.log('🔍 Running diagnostics...');
+            
+            // Check service status
+            checkServiceStatus();
+            
+            // Check token status
+            checkTokenStatus();
+            
+            // Get raw data
+            getRawData();
+        }
+
+        function checkServiceStatus() {
+            fetch('/api/SystemMonitor/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('serviceStatus');
+                    statusDiv.innerHTML = `
+                        <div><strong>Service Status:</strong> <span class="status-good">${data.serviceStatus}</span></div>
+                        <div><strong>Database Status:</strong> <span class="status-good">${data.databaseStatus}</span></div>
+                        <div><strong>API Status:</strong> <span class="status-good">${data.apiStatus}</span></div>
+                        <div><strong>Last Update:</strong> ${new Date(data.lastUpdate).toLocaleString()}</div>
+                    `;
+                })
+                .catch(error => {
+                    document.getElementById('serviceStatus').innerHTML = `<div class="status-error">Error: ${error.message}</div>`;
+                });
+        }
+
+        function checkTokenStatus() {
+            fetch('/api/TokenManagement/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusDiv = document.getElementById('tokenStatus');
+                    statusDiv.innerHTML = `
+                        <div><strong>Service Running:</strong> <span class="${data.isRunning ? 'status-good' : 'status-error'}">${data.isRunning}</span></div>
+                        <div><strong>Has API Key:</strong> <span class="${data.hasApiKey ? 'status-good' : 'status-error'}">${data.hasApiKey}</span></div>
+                        <div><strong>Has Request Token:</strong> <span class="${data.hasRequestToken ? 'status-good' : 'status-error'}">${data.hasRequestToken}</span></div>
+                        <div><strong>Timestamp:</strong> ${new Date(data.timestamp).toLocaleString()}</div>
+                        <div><strong>Message:</strong> ${data.message}</div>
+                    `;
+                })
+                .catch(error => {
+                    document.getElementById('tokenStatus').innerHTML = `<div class="status-error">Error: ${error.message}</div>`;
+                });
+        }
+
+        function getRawData() {
+            fetch('/api/SystemMonitor/latest-lc-uc-changes')
+                .then(response => response.json())
+                .then(data => {
+                    const rawDataDiv = document.getElementById('rawData');
+                    rawDataDiv.textContent = JSON.stringify(data, null, 2);
+                    
+                    // Analyze the data
+                    analyzeData(data);
+                })
+                .catch(error => {
+                    document.getElementById('rawData').textContent = `Error: ${error.message}`;
+                });
+        }
+
+        function analyzeData(data) {
+            const analysisDiv = document.getElementById('dataAnalysis');
+            let analysis = '<h4>Data Analysis Results:</h4>';
+            
+            if (!data || Object.keys(data).length === 0) {
+                analysis += '<div class="status-error">❌ No data received from API</div>';
+            } else {
+                Object.keys(data).forEach(indexName => {
+                    const indexData = data[indexName];
+                    analysis += `<div><strong>${indexName}:</strong></div>`;
+                    
+                    // Check spot close
+                    if (indexData.spotClose === 0) {
+                        analysis += '<div class="status-error">  ❌ Spot Close is 0 - No spot price data available</div>';
+                    } else {
+                        analysis += `<div class="status-good">  ✅ Spot Close: ${indexData.spotClose}</div>`;
+                    }
+                    
+                    // Check UC value
+                    if (indexData.ucValue === 0) {
+                        analysis += '<div class="status-error">  ❌ UC Value is 0 - Cannot calculate base strikes</div>';
+                    } else {
+                        analysis += `<div class="status-good">  ✅ UC Value: ${indexData.ucValue}</div>`;
+                    }
+                    
+                    // Check LC/UC changes
+                    if (!indexData.lcUcChanges || indexData.lcUcChanges.length === 0) {
+                        analysis += '<div class="status-warning">  ⚠️ No LC/UC changes found</div>';
+                    } else {
+                        analysis += `<div class="status-good">  ✅ Found ${indexData.lcUcChanges.length} LC/UC changes</div>`;
+                        
+                        // Check if all LC/UC values are 0
+                        const allZero = indexData.lcUcChanges.every(change => 
+                            change.lowerCircuitLimit === 0 && change.upperCircuitLimit === 0
+                        );
+                        
+                        if (allZero) {
+                            analysis += '<div class="status-error">  ❌ All LC/UC values are 0 - Data collection issue</div>';
+                        } else {
+                            analysis += '<div class="status-good">  ✅ LC/UC values are populated</div>';
+                        }
+                    }
+                    
+                    analysis += '<br>';
+                });
+            }
+            
+            analysisDiv.innerHTML = analysis;
+        }
+
+        // Run diagnostics on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            runDiagnostics();
+        });
+    </script>
+</body>
+</html>
+

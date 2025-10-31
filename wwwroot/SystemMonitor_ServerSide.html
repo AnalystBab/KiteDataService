@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor - Kite Market Data Service</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar h3 {
+            margin: 0 0 20px 0;
+            color: #4facfe;
+            text-align: center;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin: 5px 0;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .sidebar a:hover {
+            background: rgba(79, 172, 254, 0.2);
+        }
+
+        .sidebar a.active {
+            background: #4facfe;
+            color: white;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .refresh-btn {
+            background: #4facfe;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px;
+        }
+
+        .refresh-btn:hover {
+            background: #3d8bfe;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .metric-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .status-running {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .error {
+            color: #dc3545;
+            text-align: center;
+            font-weight: bold;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <h3>🚀 Navigation</h3>
+        <ul>
+            <li><a href="AdvancedDashboard.html"><span class="nav-icon">🏠</span>Dashboard Overview</a></li>
+            <li><a href="AdvancedDashboard.html#predictions"><span class="nav-icon">📈</span>Today's Predictions</a></li>
+            <li><a href="AdvancedDashboard.html#label-analysis"><span class="nav-icon">🏷️</span>Label Analysis</a></li>
+            <li><a href="AdvancedDashboard.html#process-breakdown"><span class="nav-icon">⚙️</span>Process Breakdown</a></li>
+            <li><a href="AdvancedDashboard.html#pattern-insights"><span class="nav-icon">💡</span>Pattern Insights</a></li>
+            <li><a href="AdvancedDashboard.html#live-market"><span class="nav-icon">📡</span>Live Market</a></li>
+            <li><a href="AdvancedDashboard.html#historical-data"><span class="nav-icon">🕒</span>Historical Data</a></li>
+            <li><a href="AdvancedDashboard.html#strike-analysis"><span class="nav-icon">📊</span>Strike Analysis</a></li>
+            <li><a href="PremiumPredictions.html"><span class="nav-icon">🎯</span>Premium HLC Predictions</a></li>
+            <li><a href="ServiceOverview.html"><span class="nav-icon">📋</span>Service Overview</a></li>
+            <li><a href="SystemMonitor.html" class="active"><span class="nav-icon">📊</span>System Monitor</a></li>
+            <li><a href="token-management.html" target="_blank"><span class="nav-icon">🔑</span>Token Management</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1>📊 System Monitor 📊</h1>
+                <p>Real-time monitoring of Kite Market Data Service</p>
+                <button class="refresh-btn" onclick="location.reload()">🔄 Force Refresh</button>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Service Status Card -->
+                <div class="card">
+                    <h3>🔧 Service Status</h3>
+                    <div class="metric">
+                        <span class="metric-label">Status</span>
+                        <span class="metric-value status-running">Running</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Token Status</span>
+                        <span class="metric-value status-running">Configured</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Last Update</span>
+                        <span class="metric-value" id="lastUpdate">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Database Status Card -->
+                <div class="card">
+                    <h3>🗄️ Database Status</h3>
+                    <div class="metric">
+                        <span class="metric-label">Connection</span>
+                        <span class="metric-value status-running">Connected</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">API Status</span>
+                        <span class="metric-value status-running">Active</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LC/UC Changes Card -->
+            <div class="card">
+                <h3>⚠️ Latest LC/UC Changes (Last 3 Records)</h3>
+                <div id="lcUcContainer">
+                    <div class="loading">Loading LC/UC changes...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple approach - load server-side generated HTML
+        function loadLcUcData() {
+            const container = document.getElementById('lcUcContainer');
+            container.innerHTML = '<div class="loading">Loading LC/UC changes...</div>';
+            
+            // Fetch server-side generated HTML
+            fetch('/api/SystemMonitor/lc-uc-html')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    console.log('✅ LC/UC data loaded successfully');
+                })
+                .catch(error => {
+                    console.error('❌ Error loading LC/UC data:', error);
+                    container.innerHTML = `<div class="error">Error loading data: ${error.message}</div>`;
+                });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded, loading LC/UC data...');
+            
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            
+            // Load LC/UC data
+            loadLcUcData();
+            
+            // Auto-refresh every 15 seconds
+            setInterval(() => {
+                loadLcUcData();
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            }, 15000);
+        });
+    </script>
+</body>
+</html>
+

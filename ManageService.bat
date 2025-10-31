@@ -1,104 +1,186 @@
 @echo off
-REM Windows Service Management Script
-REM Run as Administrator for install/uninstall
-
-title Kite Market Data Service - Management
-
+echo ========================================
+echo  Kite Market Data Service Manager
+echo ========================================
 echo.
-echo ===================================================================
-echo    KITE MARKET DATA SERVICE - WINDOWS SERVICE MANAGEMENT
-echo ===================================================================
+
+REM Check if PowerShell is available
+powershell -Command "Get-Host" >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: PowerShell is not available
+    echo Please install PowerShell or run the service manually
+    pause
+    exit /b 1
+)
+
+REM Get the directory where this batch file is located
+set "SERVICE_DIR=%~dp0"
+set "SERVICE_DIR=%SERVICE_DIR:~0,-1%"
+
+echo Service Directory: %SERVICE_DIR%
 echo.
+
+REM Check if the PowerShell script exists
+if not exist "%SERVICE_DIR%\RunServiceInBackground.ps1" (
+    echo ERROR: RunServiceInBackground.ps1 not found
+    echo Please ensure the PowerShell script is in the same directory
+    pause
+    exit /b 1
+)
+
+REM Check if the monitoring script exists
+if not exist "%SERVICE_DIR%\SimpleServiceMonitor.ps1" (
+    echo ERROR: SimpleServiceMonitor.ps1 not found
+    echo Please ensure the monitoring script is in the same directory
+    pause
+    exit /b 1
+)
 
 :menu
+echo.
 echo Choose an option:
+echo 1. Start Service in Background
+echo 2. Stop Service
+echo 3. Restart Service
+echo 4. Check Service Status
+echo 5. Monitor Service Health (Continuous)
+echo 6. Quick Health Check
+echo 7. Detailed Health Report
+echo 8. Open Web Interface
+echo 9. Exit
 echo.
-echo 1. Install Windows Service
-echo 2. Uninstall Windows Service  
-echo 3. Start Service
-echo 4. Stop Service
-echo 5. Restart Service
-echo 6. Check Service Status
-echo 7. Open Web Interface
-echo 8. Exit
-echo.
+set /p choice="Enter your choice (1-9): "
 
-set /p choice="Enter your choice (1-8): "
-
-if "%choice%"=="1" goto install
-if "%choice%"=="2" goto uninstall
-if "%choice%"=="3" goto start
-if "%choice%"=="4" goto stop
-if "%choice%"=="5" goto restart
-if "%choice%"=="6" goto status
-if "%choice%"=="7" goto web
-if "%choice%"=="8" goto exit
-
+if "%choice%"=="1" goto start_service
+if "%choice%"=="2" goto stop_service
+if "%choice%"=="3" goto restart_service
+if "%choice%"=="4" goto check_status
+if "%choice%"=="5" goto monitor_health
+if "%choice%"=="6" goto quick_health
+if "%choice%"=="7" goto detailed_health
+if "%choice%"=="8" goto open_web
+if "%choice%"=="9" goto exit
 echo Invalid choice. Please try again.
 goto menu
 
-:install
+:start_service
 echo.
-echo Installing Windows Service...
-powershell -ExecutionPolicy Bypass -File "InstallService.ps1"
+echo Starting service in background...
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\RunServiceInBackground.ps1'"
+echo.
+echo Service start command completed.
+echo Check status with option 4 or monitor with option 5.
+pause
 goto menu
 
-:uninstall
-echo.
-echo Uninstalling Windows Service...
-powershell -ExecutionPolicy Bypass -File "InstallService.ps1" -Uninstall
-goto menu
-
-:start
-echo.
-echo Starting service...
-net start "KiteMarketDataService"
-if %errorlevel% equ 0 (
-    echo Service started successfully!
-) else (
-    echo Failed to start service.
-)
-goto menu
-
-:stop
+:stop_service
 echo.
 echo Stopping service...
-net stop "KiteMarketDataService"
-if %errorlevel% equ 0 (
-    echo Service stopped successfully!
-) else (
-    echo Failed to stop service.
-)
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\RunServiceInBackground.ps1' -Stop"
+echo.
+echo Service stop command completed.
+pause
 goto menu
 
-:restart
+:restart_service
 echo.
 echo Restarting service...
-net stop "KiteMarketDataService"
-timeout /t 3 /nobreak >nul
-net start "KiteMarketDataService"
-if %errorlevel% equ 0 (
-    echo Service restarted successfully!
-) else (
-    echo Failed to restart service.
-)
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\RunServiceInBackground.ps1' -Restart"
+echo.
+echo Service restart command completed.
+pause
 goto menu
 
-:status
+:check_status
 echo.
 echo Checking service status...
-sc query "KiteMarketDataService"
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\RunServiceInBackground.ps1' -Status"
+echo.
+pause
 goto menu
 
-:web
+:monitor_health
+echo.
+echo Starting continuous health monitoring...
+echo Press Ctrl+C to stop monitoring
+echo.
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1' -Continuous"
+echo.
+echo Monitoring stopped.
+pause
+goto menu
+
+:quick_health
+echo.
+echo Quick health check...
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1' -Quick"
+echo.
+pause
+goto menu
+
+:detailed_health
+echo.
+echo Detailed health report...
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1'"
+echo.
+pause
+goto menu
+
+:open_web
 echo.
 echo Opening web interface...
-start http://localhost:5000/token-management.html
+echo If the service is running, this will open http://localhost:5000
+echo.
+start http://localhost:5000
+echo Web interface opened in default browser.
+pause
 goto menu
 
 :exit
 echo.
 echo Goodbye!
+echo.
 pause
+exit /b 0
 exit
 
+
+echo.
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1' -Continuous"
+echo.
+echo Monitoring stopped.
+pause
+goto menu
+
+:quick_health
+echo.
+echo Quick health check...
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1' -Quick"
+echo.
+pause
+goto menu
+
+:detailed_health
+echo.
+echo Detailed health report...
+powershell -ExecutionPolicy Bypass -Command "& '%SERVICE_DIR%\SimpleServiceMonitor.ps1'"
+echo.
+pause
+goto menu
+
+:open_web
+echo.
+echo Opening web interface...
+echo If the service is running, this will open http://localhost:5000
+echo.
+start http://localhost:5000
+echo Web interface opened in default browser.
+pause
+goto menu
+
+:exit
+echo.
+echo Goodbye!
+echo.
+pause
+exit /b 0

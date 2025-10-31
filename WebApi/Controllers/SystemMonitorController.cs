@@ -755,3 +755,49 @@ namespace KiteMarketDataService.Worker.WebApi.Controllers
         }
     }
 }
+
+                else
+                {
+                    var lcUcProperty = indexData.GetType().GetProperty("LcUcChanges");
+                    if (lcUcProperty != null)
+                    {
+                        var changes = lcUcProperty.GetValue(indexData);
+                        if (changes is List<object> changesList)
+                        {
+                            return changesList;
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Error getting LC/UC changes: {ex.Message}");
+                return null;
+            }
+        }
+    }
+}
+
+                else
+                {
+                    var lcUcProperty = indexData.GetType().GetProperty("LcUcChanges");
+                    if (lcUcProperty != null)
+                    {
+                        var changes = lcUcProperty.GetValue(indexData);
+                        if (changes is List<object> changesList)
+                        {
+                            return changesList;
+                        }
+                    }
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Error getting LC/UC changes: {ex.Message}");
+                return null;
+            }
+        }
+    }
+}

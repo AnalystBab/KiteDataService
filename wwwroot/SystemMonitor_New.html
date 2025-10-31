@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor - Kite Market Data Service</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar h3 {
+            margin: 0 0 20px 0;
+            color: #4facfe;
+            text-align: center;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar li {
+            margin: 5px 0;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .sidebar a:hover {
+            background: rgba(79, 172, 254, 0.2);
+        }
+
+        .sidebar a.active {
+            background: #4facfe;
+            color: white;
+        }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        .refresh-btn {
+            background: #4facfe;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px;
+        }
+
+        .refresh-btn:hover {
+            background: #3d8bfe;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .metric-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .status-running {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .lc-uc-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .lc-uc-section h4 {
+            margin: 0 0 10px 0;
+            color: #4facfe;
+        }
+
+        .spot-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .spot-item {
+            text-align: center;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .spot-label {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+        .spot-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .lc-uc-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            margin: 5px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .lc-uc-item.ce {
+            border-left: 4px solid #28a745;
+        }
+
+        .lc-uc-item.pe {
+            border-left: 4px solid #dc3545;
+        }
+
+        .strike-info {
+            text-align: center;
+        }
+
+        .strike-value {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .option-type {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .lc-value {
+            color: #dc3545;
+            text-align: center;
+        }
+
+        .uc-value {
+            color: #28a745;
+            text-align: center;
+        }
+
+        .quote-time {
+            text-align: center;
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <h3>🚀 Navigation</h3>
+        <ul>
+            <li><a href="AdvancedDashboard.html"><span class="nav-icon">🏠</span>Dashboard Overview</a></li>
+            <li><a href="AdvancedDashboard.html#predictions"><span class="nav-icon">📈</span>Today's Predictions</a></li>
+            <li><a href="AdvancedDashboard.html#label-analysis"><span class="nav-icon">🏷️</span>Label Analysis</a></li>
+            <li><a href="AdvancedDashboard.html#process-breakdown"><span class="nav-icon">⚙️</span>Process Breakdown</a></li>
+            <li><a href="AdvancedDashboard.html#pattern-insights"><span class="nav-icon">💡</span>Pattern Insights</a></li>
+            <li><a href="AdvancedDashboard.html#live-market"><span class="nav-icon">📡</span>Live Market</a></li>
+            <li><a href="AdvancedDashboard.html#historical-data"><span class="nav-icon">🕒</span>Historical Data</a></li>
+            <li><a href="AdvancedDashboard.html#strike-analysis"><span class="nav-icon">📊</span>Strike Analysis</a></li>
+            <li><a href="PremiumPredictions.html"><span class="nav-icon">🎯</span>Premium HLC Predictions</a></li>
+            <li><a href="ServiceOverview.html"><span class="nav-icon">📋</span>Service Overview</a></li>
+            <li><a href="SystemMonitor.html" class="active"><span class="nav-icon">📊</span>System Monitor</a></li>
+            <li><a href="token-management.html" target="_blank"><span class="nav-icon">🔑</span>Token Management</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1>📊 System Monitor 📊</h1>
+                <p>Real-time monitoring of Kite Market Data Service</p>
+                <button class="refresh-btn" onclick="refreshData()">🔄 Force Refresh</button>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Service Status Card -->
+                <div class="card">
+                    <h3>🔧 Service Status</h3>
+                    <div class="metric">
+                        <span class="metric-label">Status</span>
+                        <span class="metric-value status-running" id="serviceStatus">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Uptime</span>
+                        <span class="metric-value" id="serviceUptime">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Token Status</span>
+                        <span class="metric-value" id="tokenStatus">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Last Update</span>
+                        <span class="metric-value" id="lastUpdate">-</span>
+                    </div>
+                </div>
+
+                <!-- Database Status Card -->
+                <div class="card">
+                    <h3>🗄️ Database Status</h3>
+                    <div class="metric">
+                        <span class="metric-label">Connection</span>
+                        <span class="metric-value status-running" id="dbConnection">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Records Count</span>
+                        <span class="metric-value" id="recordCount">-</span>
+                    </div>
+                </div>
+
+                <!-- API Status Card -->
+                <div class="card">
+                    <h3>🔗 API Status</h3>
+                    <div class="metric">
+                        <span class="metric-label">Kite API</span>
+                        <span class="metric-value status-running" id="kiteApiStatus">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Web API</span>
+                        <span class="metric-value status-running" id="webApiStatus">Active</span>
+                    </div>
+                </div>
+
+                <!-- Data Collection Card -->
+                <div class="card">
+                    <h3>📈 Data Collection</h3>
+                    <div class="metric">
+                        <span class="metric-label">NIFTY</span>
+                        <span class="metric-value status-running" id="niftyStatus">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">SENSEX</span>
+                        <span class="metric-value status-running" id="sensexStatus">Loading...</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">BANKNIFTY</span>
+                        <span class="metric-value status-running" id="bankniftyStatus">Loading...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LC/UC Changes Card -->
+            <div class="card">
+                <h3>⚠️ Latest LC/UC Changes (Last 3 Records)</h3>
+                <div id="lcUcChanges">
+                    <div class="metric">
+                        <span class="metric-label">Status</span>
+                        <span class="metric-value">Loading LC/UC changes...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple and direct approach with better error handling
+        function refreshData() {
+            console.log('🔄 Refreshing data...');
+            
+            // Fetch system status
+            fetch('/api/SystemMonitor/status')
+                .then(response => {
+                    console.log('📡 System status response:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 System Status Data:', data);
+                    
+                    // Update service status
+                    document.getElementById('serviceStatus').textContent = data.serviceStatus || 'Unknown';
+                    document.getElementById('serviceStatus').className = 'metric-value status-running';
+                    document.getElementById('serviceUptime').textContent = data.uptime || '-';
+                    document.getElementById('tokenStatus').textContent = data.tokenStatus || 'Unknown';
+                    document.getElementById('lastUpdate').textContent = new Date(data.lastUpdate).toLocaleTimeString();
+                    
+                    // Update database status
+                    document.getElementById('dbConnection').textContent = data.databaseStatus || 'Unknown';
+                    document.getElementById('dbConnection').className = 'metric-value status-running';
+                    
+                    // Update API status
+                    document.getElementById('kiteApiStatus').textContent = data.apiStatus || 'Unknown';
+                    document.getElementById('kiteApiStatus').className = 'metric-value status-running';
+                    
+                    // Update data collection
+                    if (data.dataCollection) {
+                        document.getElementById('niftyStatus').textContent = data.dataCollection.NIFTY?.status || 'Unknown';
+                        document.getElementById('sensexStatus').textContent = data.dataCollection.SENSEX?.status || 'Unknown';
+                        document.getElementById('bankniftyStatus').textContent = data.dataCollection.BANKNIFTY?.status || 'Unknown';
+                    }
+                    
+                    // Update record count
+                    if (data.systemStats) {
+                        document.getElementById('recordCount').textContent = data.systemStats.totalTicks?.toLocaleString() || '0';
+                    }
+                    
+                    console.log('✅ System status updated');
+                })
+                .catch(error => {
+                    console.error('❌ Error fetching system status:', error);
+                    document.getElementById('serviceStatus').textContent = 'Error';
+                    document.getElementById('serviceStatus').className = 'metric-value status-error';
+                    document.getElementById('dbConnection').textContent = 'Error';
+                    document.getElementById('dbConnection').className = 'metric-value status-error';
+                });
+
+            // Fetch LC/UC changes
+            fetch('/api/SystemMonitor/latest-lc-uc-changes')
+                .then(response => {
+                    console.log('📡 LC/UC bug changes response:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 LC/UC Changes Data:', data);
+                    displayLcUcChanges(data);
+                })
+                .catch(error => {
+                    console.error('❌ Error fetching LC/UC changes:', error);
+                    document.getElementById('lcUcChanges').innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Error</span>
+                            <span class="metric-value status-error">Failed to load LC/UC changes</span>
+                        </div>
+                    `;
+                });
+        }
+
+        function displayLcUcChanges(data) {
+            console.log('🎨 Displaying LC/UC changes:', data);
+            const container = document.getElementById('lcUcChanges');
+            
+            if (!data || Object.keys(data).length === 0) {
+                container.innerHTML = `
+                    <div class="metric">
+                        <span class="metric-label">Status</span>
+                        <span class="metric-value">No LC/UC changes available</span>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            
+            Object.keys(data).forEach(index => {
+                const indexData = data[index];
+                console.log(`📊 Processing ${index}:`, indexData);
+                
+                html += `
+                    <div class="lc-uc-section">
+                        <h4>📊 ${index}</h4>
+                        
+                        <div class="spot-info">
+                            <div class="spot-item">
+                                <div class="spot-label">Spot Close</div>
+                                <div class="spot-value">${indexData.SpotClose > 0 ? indexData.SpotClose.toLocaleString() : 'N/A'}</div>
+                            </div>
+                            <div class="spot-item">
+                                <div class="spot-label">UC Value</div>
+                                <div class="spot-value">${indexData.UcValue > 0 ? indexData.UcValue.toLocaleString() : 'N/A'}</div>
+                            </div>
+                            <div class="spot-item">
+                                <div class="spot-label">Call Base</div>
+                                <div class="spot-value">${indexData.CallBaseStrike !== 0 ? indexData.CallBaseStrike.toLocaleString() : 'N/A'}</div>
+                            </div>
+                            <div class="spot-item">
+                                <div class="spot-label">Put Base</div>
+                                <div class="spot-value">${indexData.PutBaseStrike !== 0 ? indexData.PutBaseStrike.toLocaleString() : 'N/A'}</div>
+                            </div>
+                        </div>
+                `;
+
+                if (indexData.LcUcChanges && indexData.LcUcChanges.length > 0) {
+                    console.log(`📊 Found ${indexData.LcUcChanges.length} LC/UC changes for ${index}`);
+                    indexData.LcUcChanges.forEach(change => {
+                        console.log('📊 LC/UC Change:', change);
+                        html += `
+                            <div class="lc-uc-item ${change.OptionType.toLowerCase()}">
+                                <div class="strike-info">
+                                    <div class="strike-value">${change.Strike}</div>
+                                    <div class="option-type">${change.OptionType}</div>
+                                </div>
+                                <div class="lc-value">LC: ${change.LowerCircuitLimit > 0 ? change.LowerCircuitLimit.toLocaleString() : 'N/A'}</div>
+                                <div class="uc-value">UC: ${change.UpperCircuitLimit > 0 ? change.UpperCircuitLimit.toLocaleString() : 'N/A'}</div>
+                                <div class="quote-time">${change.QuoteTime}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `
+                        <div class="metric">
+                            <span class="metric-label">No recent changes</span>
+                            <span class="metric-value">No LC/UC changes found for ${index}</span>
+                        </div>
+                    `;
+                }
+
+                html += '</div>';
+            });
+
+            container.innerHTML = html;
+            console.log('✅ LC/UC changes displayed successfully');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Page loaded, refreshing data...');
+            refreshData();
+            
+            // Auto-refresh every 10 seconds
+            setInterval(refreshData, 10000);
+        });
+    </script>
+</body>
+</html>
+

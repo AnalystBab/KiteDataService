@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kite Market Data Service - Startup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .startup-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-value {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-value.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-value.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-value.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .auth-section {
+            background: #e3f2fd;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid #2196f3;
+        }
+
+        .auth-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2196f3;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #2196f3, #21cbf3);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="startup-container">
+        <div class="logo">🚀 Kite Market Data Service</div>
+        <div class="subtitle">Reliable Authentication & Service Management</div>
+
+        <!-- Service Status -->
+        <div class="status-card">
+            <h3>Service Status</h3>
+            <div class="status-item">
+                <span class="status-label">Service Status</span>
+                <span class="status-value" id="serviceStatus">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Database Connection</span>
+                <span class="status-value" id="dbStatus">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Authentication</span>
+                <span class="status-value" id="authStatus">Checking...</span>
+            </div>
+        </div>
+
+        <!-- Authentication Section -->
+        <div class="auth-section">
+            <div class="auth-title">🔐 Authentication Setup</div>
+            
+            <div class="input-group">
+                <label for="apiKey">API Key</label>
+                <input type="text" id="apiKey" placeholder="Enter your Kite Connect API Key" value="kw3ptb0zmocwupmo">
+            </div>
+
+            <div class="input-group">
+                <label for="apiSecret">API Secret</label>
+                <input type="password" id="apiSecret" placeholder="Enter your Kite Connect API Secret" value="q6iqhpb3lx2sw9tomkrljb5fmczdx6mv">
+            </div>
+
+            <div class="input-group">
+                <label for="requestToken">Request Token</label>
+                <input type="text" id="requestToken" placeholder="Get fresh request token from Kite Connect">
+            </div>
+
+            <button class="btn" onclick="getRequestToken()">Get Request Token</button>
+            <button class="btn btn-success" onclick="updateToken()">Update Token</button>
+            <button class="btn btn-warning" onclick="testAuthentication()">Test Auth</button>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Logs -->
+        <div class="log-container" id="logContainer">
+            <div>System startup initiated...</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div>
+            <button class="btn btn-success" id="startServiceBtn" onclick="startService()" disabled>Start Service</button>
+            <button class="btn" onclick="openDashboard()" id="dashboardBtn" disabled>Open Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        let isServiceReady = false;
+        let isAuthenticated = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Initializing startup sequence...');
+            checkServiceStatus();
+        });
+
+        function log(message) {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            logContainer.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function checkServiceStatus() {
+            try {
+                log('🔍 Checking service status...');
+                
+                // Check startup status
+                const response = await fetch('/api/Startup/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('serviceStatus', data.serviceStatus, 'success');
+                    updateStatus('dbStatus', 'Connected', 'success');
+                    updateStatus('authStatus', data.authenticationStatus, data.isAuthenticated ? 'success' : 'warning');
+                    
+                    if (data.isAuthenticated) {
+                        isAuthenticated = true;
+                        log('✅ Service is running and authenticated');
+                        enableServiceStart();
+                    } else {
+                        isAuthenticated = false;
+                        log('⚠️ Service is running but authentication required');
+                    }
+                } else {
+                    updateStatus('serviceStatus', 'Not Running', 'error');
+                    updateStatus('dbStatus', 'Disconnected', 'error');
+                    log('❌ Service is not running');
+                }
+            } catch (error) {
+                updateStatus('serviceStatus', 'Not Running', 'error');
+                updateStatus('dbStatus', 'Disconnected', 'error');
+                log('❌ Service is not accessible');
+            }
+        }
+
+        async function checkAuthentication() {
+            try {
+                log('🔐 Checking authentication status...');
+                const response = await fetch('/api/ImprovedTokenManagement/status');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.isAuthenticated) {
+                        updateStatus('authStatus', 'Authenticated', 'success');
+                        isAuthenticated = true;
+                        log('✅ Authentication successful');
+                        enableServiceStart();
+                    } else {
+                        updateStatus('authStatus', 'Not Authenticated', 'warning');
+                        isAuthenticated = false;
+                        log('⚠️ Authentication required');
+                    }
+                }
+            } catch (error) {
+                updateStatus('authStatus', 'Error', 'error');
+                log('❌ Authentication check failed');
+            }
+        }
+
+        function updateStatus(elementId, text, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = text;
+            element.className = `status-value ${type}`;
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function enableServiceStart() {
+            if (isAuthenticated) {
+                document.getElementById('startServiceBtn').disabled = false;
+                document.getElementById('dashboardBtn').disabled = false;
+                log('✅ Service ready to start');
+            }
+        }
+
+        async function getRequestToken() {
+            const apiKey = document.getElementById('apiKey').value;
+            if (!apiKey) {
+                alert('Please enter API Key first');
+                return;
+            }
+
+            log('🔗 Opening Kite Connect login...');
+            const kiteUrl = `https://kite.trade/connect/login?api_key=${apiKey}`;
+            window.open(kiteUrl, '_blank');
+            
+            log('📋 After login, copy the request_token from the URL and paste it below');
+        }
+
+        async function updateToken() {
+            const requestToken = document.getElementById('requestToken').value;
+            if (!requestToken) {
+                alert('Please enter request token');
+                return;
+            }
+
+            try {
+                log('🔄 Updating request token...');
+                updateProgress(30);
+
+                const response = await fetch('/api/Startup/update-token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ requestToken: requestToken })
+                });
+
+                updateProgress(60);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    log('✅ Token updated successfully');
+                    updateProgress(100);
+                    
+                    // Refresh authentication status
+                    setTimeout(() => {
+                        checkServiceStatus();
+                    }, 2000);
+                } else {
+                    const error = await response.text();
+                    log(`❌ Token update failed: ${error}`);
+                    updateProgress(0);
+                }
+            } catch (error) {
+                log(`❌ Error updating token: ${error.message}`);
+                updateProgress(0);
+            }
+        }
+
+        async function testAuthentication() {
+            try {
+                log('🧪 Testing authentication...');
+                updateProgress(50);
+
+                const response = await fetch('/api/Startup/test-auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+
+                updateProgress(80);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    log(result.success ? '✅ Authentication test successful' : '❌ Authentication test failed');
+                    updateProgress(100);
+                    checkServiceStatus();
+                } else {
+                    const error = await response.text();
+                    log(`❌ Authentication test failed: ${error}`);
+                    updateProgress(0);
+                }
+            } catch (error) {
+                log(`❌ Authentication test error: ${error.message}`);
+                updateProgress(0);
+            }
+        }
+
+        function startService() {
+            log('🚀 Starting service...');
+            // Service is already running, just enable dashboard
+            enableServiceStart();
+        }
+
+        function openDashboard() {
+            log('📊 Opening dashboard...');
+            window.location.href = '/AdvancedDashboard.html';
+        }
+
+        // Auto-refresh status every 10 seconds
+        setInterval(checkServiceStatus, 10000);
+    </script>
+</body>
+</html>

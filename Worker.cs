@@ -1758,3 +1758,311 @@ namespace KiteMarketDataService.Worker
 
     }
 }
+
+                _logger.LogInformation("=== STARTING INTRADAY TICK DATA STORAGE ===");
+                _logger.LogInformation($"Tick data storage started at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+
+                await _intradayTickDataService.StoreIntradayTickDataAsync();
+
+                _logger.LogInformation("=== INTRADAY TICK DATA STORAGE COMPLETED ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to store intraday tick data");
+            }
+        }
+
+        /// <summary>
+        /// Check if LC/UC changes occurred and determine if Excel export should be triggered
+        /// </summary>
+        private async Task<bool> CheckForLCUCChangesAndExportAsync()
+        {
+            try
+            {
+                using var scope = _serviceScopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
+
+                var currentIST = DateTime.UtcNow.AddHours(5.5);
+                var currentBusinessDate = currentIST.Date;
+
+                // Check if we have any new LC/UC changes since last export
+                var lastExportThreshold = _lastExportTime == DateTime.MinValue 
+                    ? currentBusinessDate.AddHours(6) // If never exported, check from 6 AM today
+                    : _lastExportTime.AddMinutes(-5); // Check 5 minutes before last export to avoid missing changes
+
+                // Get latest market quotes with LC/UC changes
+                var recentChanges = await context.MarketQuotes
+                    .Where(q => q.BusinessDate == currentBusinessDate &&
+                               q.RecordDateTime > lastExportThreshold &&
+                               q.InsertionSequence > 1) // Only changes (sequence > 1)
+                    .OrderByDescending(q => q.RecordDateTime)
+                    .Take(10) // Check last 10 changes
+                    .ToListAsync();
+
+                if (recentChanges.Any())
+                {
+                    _logger.LogInformation($"🔄 LC/UC changes detected: {recentChanges.Count} changes since {lastExportThreshold:HH:mm:ss}");
+                    
+                    // Update last export time
+                    _lastExportTime = currentIST;
+                    
+                    // Log sample changes
+                    foreach (var change in recentChanges.Take(3))
+                    {
+                        _logger.LogInformation($"  📊 {change.TradingSymbol}: LC={change.LowerCircuitLimit}, UC={change.UpperCircuitLimit} at {change.RecordDateTime:HH:mm:ss}");
+                    }
+                    
+                    return true; // Trigger export
+                }
+
+                return false; // No changes detected
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking for LC/UC changes");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Clear log file for fresh start on each service run
+        /// </summary>
+        private void ClearLogFile()
+        {
+            try
+            {
+                var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "KiteMarketDataService.log");
+                
+                if (File.Exists(logPath))
+                {
+                    File.WriteAllText(logPath, string.Empty);
+                    // Log to file only, no console output (tick mark shown in main flow)
+                }
+                // If file doesn't exist, it will be created automatically - no message needed
+            }
+            catch (Exception ex)
+            {
+                // Log error to file only
+                _logger.LogError(ex, "Could not clear log file");
+            }
+        }
+
+        /// <summary>
+        /// Export daily initial data to Excel files
+        /// </summary>
+        private async Task ExportDailyInitialDataAsync()
+        {
+            try
+            {
+                var currentIST = DateTime.UtcNow.AddHours(5.5);
+                var currentBusinessDate = currentIST.Date;
+
+                // Check if we already exported initial data for today
+                var exportPath = _dailyInitialDataExportService.GetExportPath();
+                var todayExportDir = Path.Combine(exportPath, currentBusinessDate.ToString("yyyy-MM-dd"));
+                
+                if (Directory.Exists(todayExportDir) && Directory.GetFiles(todayExportDir, "*.xlsx").Any())
+                {
+                    _logger.LogDebug($"Initial data already exported for {currentBusinessDate:yyyy-MM-dd}");
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"📊 [{DateTime.Now:HH:mm:ss}] Exporting daily initial data for {currentBusinessDate:yyyy-MM-dd}...");
+                Console.ResetColor();
+
+                var createdFiles = await _dailyInitialDataExportService.ExportDailyInitialDataAsync(currentBusinessDate);
+                
+                if (createdFiles.Any())
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"✅ [{DateTime.Now:HH:mm:ss}] Daily initial data exported: {createdFiles.Count} files created");
+                    Console.ResetColor();
+                    _logger.LogInformation($"Daily initial data export completed: {createdFiles.Count} files created");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"⚠️ [{DateTime.Now:HH:mm:ss}] No initial data to export for {currentBusinessDate:yyyy-MM-dd}");
+                    Console.ResetColor();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export daily initial data");
+            }
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                _instanceMutex?.ReleaseMutex();
+                _instanceMutex?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error disposing mutex");
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
+
+    }
+}
+
+                _logger.LogInformation("=== STARTING INTRADAY TICK DATA STORAGE ===");
+                _logger.LogInformation($"Tick data storage started at: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+
+                await _intradayTickDataService.StoreIntradayTickDataAsync();
+
+                _logger.LogInformation("=== INTRADAY TICK DATA STORAGE COMPLETED ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to store intraday tick data");
+            }
+        }
+
+        /// <summary>
+        /// Check if LC/UC changes occurred and determine if Excel export should be triggered
+        /// </summary>
+        private async Task<bool> CheckForLCUCChangesAndExportAsync()
+        {
+            try
+            {
+                using var scope = _serviceScopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<MarketDataContext>();
+
+                var currentIST = DateTime.UtcNow.AddHours(5.5);
+                var currentBusinessDate = currentIST.Date;
+
+                // Check if we have any new LC/UC changes since last export
+                var lastExportThreshold = _lastExportTime == DateTime.MinValue 
+                    ? currentBusinessDate.AddHours(6) // If never exported, check from 6 AM today
+                    : _lastExportTime.AddMinutes(-5); // Check 5 minutes before last export to avoid missing changes
+
+                // Get latest market quotes with LC/UC changes
+                var recentChanges = await context.MarketQuotes
+                    .Where(q => q.BusinessDate == currentBusinessDate &&
+                               q.RecordDateTime > lastExportThreshold &&
+                               q.InsertionSequence > 1) // Only changes (sequence > 1)
+                    .OrderByDescending(q => q.RecordDateTime)
+                    .Take(10) // Check last 10 changes
+                    .ToListAsync();
+
+                if (recentChanges.Any())
+                {
+                    _logger.LogInformation($"🔄 LC/UC changes detected: {recentChanges.Count} changes since {lastExportThreshold:HH:mm:ss}");
+                    
+                    // Update last export time
+                    _lastExportTime = currentIST;
+                    
+                    // Log sample changes
+                    foreach (var change in recentChanges.Take(3))
+                    {
+                        _logger.LogInformation($"  📊 {change.TradingSymbol}: LC={change.LowerCircuitLimit}, UC={change.UpperCircuitLimit} at {change.RecordDateTime:HH:mm:ss}");
+                    }
+                    
+                    return true; // Trigger export
+                }
+
+                return false; // No changes detected
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking for LC/UC changes");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Clear log file for fresh start on each service run
+        /// </summary>
+        private void ClearLogFile()
+        {
+            try
+            {
+                var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "KiteMarketDataService.log");
+                
+                if (File.Exists(logPath))
+                {
+                    File.WriteAllText(logPath, string.Empty);
+                    // Log to file only, no console output (tick mark shown in main flow)
+                }
+                // If file doesn't exist, it will be created automatically - no message needed
+            }
+            catch (Exception ex)
+            {
+                // Log error to file only
+                _logger.LogError(ex, "Could not clear log file");
+            }
+        }
+
+        /// <summary>
+        /// Export daily initial data to Excel files
+        /// </summary>
+        private async Task ExportDailyInitialDataAsync()
+        {
+            try
+            {
+                var currentIST = DateTime.UtcNow.AddHours(5.5);
+                var currentBusinessDate = currentIST.Date;
+
+                // Check if we already exported initial data for today
+                var exportPath = _dailyInitialDataExportService.GetExportPath();
+                var todayExportDir = Path.Combine(exportPath, currentBusinessDate.ToString("yyyy-MM-dd"));
+                
+                if (Directory.Exists(todayExportDir) && Directory.GetFiles(todayExportDir, "*.xlsx").Any())
+                {
+                    _logger.LogDebug($"Initial data already exported for {currentBusinessDate:yyyy-MM-dd}");
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"📊 [{DateTime.Now:HH:mm:ss}] Exporting daily initial data for {currentBusinessDate:yyyy-MM-dd}...");
+                Console.ResetColor();
+
+                var createdFiles = await _dailyInitialDataExportService.ExportDailyInitialDataAsync(currentBusinessDate);
+                
+                if (createdFiles.Any())
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"✅ [{DateTime.Now:HH:mm:ss}] Daily initial data exported: {createdFiles.Count} files created");
+                    Console.ResetColor();
+                    _logger.LogInformation($"Daily initial data export completed: {createdFiles.Count} files created");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"⚠️ [{DateTime.Now:HH:mm:ss}] No initial data to export for {currentBusinessDate:yyyy-MM-dd}");
+                    Console.ResetColor();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to export daily initial data");
+            }
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                _instanceMutex?.ReleaseMutex();
+                _instanceMutex?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error disposing mutex");
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
+
+    }
+}
